@@ -1,0 +1,10 @@
+Builds/
+build/
+cmake-build-*/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.DS_Store
+*.vst3
+*.component
+*.aaxplugin
