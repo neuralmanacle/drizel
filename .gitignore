@@ -8,4 +8,4 @@ xcuserdata/
 *.vst3
 *.component
 *.aaxplugin
-/JuceLibraryCode/
+JuceLibraryCode/
