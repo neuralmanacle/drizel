@@ -1,4 +1,6 @@
-![Drizel logo](docs/assets/drizel-logo.png) Drizel
+# ![Drizel logo](docs/assets/drizel-logo.jpg) 
+
+# Drizel
 
 **A granular synthesizer built with C++ and JUCE.**
 
