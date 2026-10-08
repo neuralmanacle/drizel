@@ -28,6 +28,9 @@ The project focuses on three goals:
 - MIDI input and control
 - Graphical user interface
 - Standalone application and audio plugin builds
+- Optional AI-assisted modulation (experimental): a language model proposes
+  slow parameter trajectories, such as scan position and grain density,
+  outside the audio thread
 
 ## Development roadmap
 
@@ -50,6 +53,14 @@ The project focuses on three goals:
 - [ ] Build the graphical interface
 - [ ] Package and test standalone and plugin builds
 
+### 4. AI-assisted modulation (experimental)
+
+- [ ] Run small studies in `experiments/` on which control tasks a model can handle and what prompting it needs
+- [ ] Measure inference latency and jitter from the target deployment location
+- [ ] Analyse samples offline (onsets, loudness, spectral features) to give the model a semantic map
+- [ ] Add a lock-free modulation queue with timestamped breakpoints and lookahead
+- [ ] Add a non-realtime network thread with a fallback to local modulation when responses are late
+
 See the [development roadmap](docs/roadmap.md) for further detail.
 
 ## Proposed architecture
@@ -65,6 +76,11 @@ The engine reads from a shared sample buffer. A scheduler starts grain voices, e
 | Window envelope | Shape each grain’s amplitude |
 | Overlap-add mixer | Sum active grain outputs |
 | Output stage | Apply output gain and any future effects |
+| Modulation sources | LFOs, MIDI, and optional model-driven trajectories feeding smoothed parameters |
+
+Model inference is never called from the audio thread. Network latency
+(roughly 100-200ms or more, depending on region) is hidden by requesting
+timestamped trajectories several seconds ahead and interpolating them in the engine.
 
 See the [architecture documentation](docs/architecture.md) for design notes.
 
@@ -95,6 +111,7 @@ Projucer regenerates the supporting project files in `JuceLibraryCode/` and `Bui
 | `src/` | Granular engine, plugin, and application source |
 | `tests/` | Automated tests as they are developed |
 | `experiments/` | Focused DSP prototypes and exploratory code |
+| `experiments/llm-control/` | Studies on model-driven modulation: prompts, latency, failure modes |
 | `learning/` | C++, digital audio, and DSP study notes |
 | `docs/` | Architecture, design decisions, and roadmap |
 
