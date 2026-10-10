@@ -2,7 +2,13 @@
 
 This roadmap builds Drizel from the bottom up. Each layer depends only on the layers beneath it, and each ends with a concrete, testable result before the next begins. Nothing in a higher layer is started until the exit criteria of the layer below are met.
 
-> **Status:** Early development. All items are planned, not complete.
+> **Status — 10 October 2026:** The first offline WAV milestone is reached:
+> the maintainer reported passing CMake/CTest checks on macOS and an exact
+> decoded-sample round trip of a real stereo file. The starter plugin also runs;
+> its editor still shows "Hello World!". Listening and large-file stress checks
+> remain open. See the [development log](devlog/2026-10-10.md) and
+> [audio-data design](audio-data.md). Promptable modulation is a documented
+> research direction, with implementation still planned.
 
 ## How to read this roadmap
 
@@ -25,16 +31,16 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 
 **Goal:** A working toolchain and enough C++ and DSP knowledge to start without guessing.
 
-**Study** (notes go in `learning/`)
+**Study** (notes go in `learnings/`)
 - [ ] C++ essentials: value semantics, references, RAII, `std::vector`, `std::array`, `const` correctness
 - [ ] Memory and lifetime: stack vs heap, ownership, smart pointers, why allocation matters in real-time code
 - [ ] Digital audio basics: sample rate, bit depth, buffers, aliasing, Nyquist
 - [ ] Concurrency basics: threads, data races, `std::atomic`, memory ordering at an introductory level
 
 **Build**
-- [ ] Repository layout in place (`src/`, `tests/`, `experiments/`, `learning/`, `docs/`)
-- [ ] JUCE and Projucer project opens and builds on the target machine
-- [ ] A test runner is chosen and one trivial test passes (JUCE `UnitTest` or an external framework)
+- [x] Repository layout in place (`src/`, `tests/`, `experiments/`, `learnings/`, `docs/`)
+- [x] JUCE and Projucer starter project builds and opens on the target machine (maintainer report; no audio engine yet)
+- [x] A test runner is chosen and automated tests pass (C++ executable registered with CTest)
 - [ ] Continuous formatting and warning settings agreed (warnings as errors where practical)
 
 **Exit criteria**
@@ -47,22 +53,31 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 
 **Goal:** Get audio into memory and out again, with no synthesis yet.
 
-- [ ] Define the internal sample buffer type (channel layout, sample type, length, sample rate)
-- [ ] Load WAV files into the buffer (mono and stereo, 16/24-bit and 32-bit float)
-- [ ] Handle load failures explicitly (missing file, unsupported format, empty data)
-- [ ] Write a buffer back out to WAV for offline inspection
-- [ ] Decide and document the policy for sample-rate mismatches (resample at load, or at playback)
+- [x] Define the internal sample buffer type (channel layout, sample type, length, sample rate)
+- [x] Load WAV files into the buffer (mono and stereo, 16/24-bit and 32-bit float)
+- [x] Handle load failures explicitly (missing file, unsupported format, empty data)
+- [x] Write a buffer back out to WAV for offline inspection
+- [x] Decide and document the policy for sample-rate mismatches (preserve source rate; resample at playback later)
 
 **Experiments**
-- [ ] `experiments/` program that loads a WAV, prints its properties, and writes an unmodified copy
+- [x] `experiments/` program that loads a WAV, prints its properties, and writes a copy with identical decoded samples (float32 output; metadata is not copied)
 
 **Tests**
-- [ ] Round trip: load, write, reload, and compare sample data
-- [ ] Edge cases: zero-length file, single sample, very long file
+- [x] Round trip: load, write, reload, and compare sample data
+- [x] Edge cases: zero-length data is rejected and one-frame files round-trip
+- [x] Excessive claimed lengths and decoded-memory limits are checked before allocation
+- [x] Real-file round trip on the target Mac: stereo, 48 kHz, 2,273,072 frames (47.356 seconds)
 
 **Exit criteria**
-- Any supported WAV loads into the buffer and writes back identically.
+- Supported-format fixtures and the recorded real file load, write, and reload with identical decoded samples and audio properties.
 - Loading never happens on the audio thread (design noted in `docs/`).
+
+**Additional validation**
+- [ ] Listen to the source and exported file on the target machine
+- [ ] Measure memory use and runtime with long files near the configured limit
+
+The initial offline milestone is complete within this scope. Extra validation
+remains tracked here; this does not claim a finished sample-loading UI or engine.
 
 ---
 
@@ -194,7 +209,7 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 - Position, pitch, density, and spread can each be driven by any source.
 - Adding a new source requires no changes to the engine.
 
-> This layer is the attachment point for MIDI (Layer 7) and for model-driven trajectories (Layer 9).
+> This layer is the attachment point for MIDI (Layer 7) and for local execution of prompt-derived policies (Layer 9).
 
 ---
 
@@ -241,15 +256,26 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 
 ---
 
-## Layer 9: AI-assisted modulation (experimental)
+## Layer 9: Promptable modulation policies (experimental)
 
-**Goal:** Let a language model act as a slow, smart modulation source, without ever touching the audio path.
+**Goal:** Let a musician describe how a parameter should move, translate that
+intent into an editable policy, and execute the accepted behaviour locally.
+Model inference stays outside the audio callback.
 
 **Prerequisite:** Layers 5 and 6 are complete. The engine already accepts smoothed, timestamped parameter changes.
 
+The first target is grain scan position. Example prompts are "very chaotic",
+"go around in circles", and "one step forward two step back". These map to
+proposed irregular, cyclic, and directional-step patterns; their meanings and
+defaults must be tested rather than assumed. See the
+[promptable modulation proposal](promptable-modulation.md). No model or provider
+has been selected, and the core instrument remains independent of that choice.
+
 ### 9.1 Studies (in `experiments/llm-control/`)
-- [ ] Define candidate control tasks (follow a text description, respond to a mood control, evolve over time)
+- [ ] Define the initial grain-scan policy vocabulary, parameter units, region bounds, and repeat behaviour
+- [ ] Compare direct pattern controls with prompt interpretation using the three seed examples and paraphrases
 - [ ] Test prompt formats and output schemas for validity and consistency
+- [ ] Show the interpreted behaviour as a preview with editable settings
 - [ ] Record failure modes (malformed output, out-of-range values, unmusical choices)
 - [ ] Measure inference latency and jitter from the actual deployment location
 - [ ] Compare hosted and local models for quality, latency, and licensing fit
@@ -259,20 +285,28 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 - [ ] Convert the analysis into a labelled map of regions for the model to reference
 
 ### 9.3 Plumbing
+- [ ] Versioned policy schema with supported pattern names, explicit units, bounds, timing, and random seeds
+- [ ] Validate and prepare accepted policies outside the audio thread; execute only supported numeric operations
+- [ ] Local execution of cyclic scans, directional steps, and seeded irregular movement
 - [ ] Trajectory format: timestamped breakpoints for position, density, spread, and pitch, several seconds ahead
-- [ ] Lock-free single-producer, single-consumer queue from network thread to audio thread
+- [ ] Lock-free single-producer, single-consumer queue from control worker to audio thread
 - [ ] Interpolation of breakpoints inside the engine as a Layer 6 modulation source
-- [ ] Non-realtime network thread with timeouts, retries, and request batching
+- [ ] Inference worker with timeouts and cancellation; network requests only if a hosted model is chosen
+- [ ] Persist the accepted policy, schema version, edits, and seed alongside the prompt
+- [ ] Invalidate stale results when the selected sample or prompt changes
 
 ### 9.4 Resilience
-- [ ] Fallback to a local source (random walk or LFO) when a response is late or fails
-- [ ] Validation and clamping of every value received before it reaches the engine
-- [ ] Clear user-facing state: connected, degraded, offline
+- [ ] Keep the current local policy running when inference is late or fails; use a documented continuation for finite trajectories
+- [ ] Reject invalid policies and enforce all numeric limits before handoff to the engine
+- [ ] Smooth policy changes at a defined activation point
+- [ ] Clear user-facing state: interpreting, ready, or unable to interpret; preserve access to manual controls
 - [ ] The instrument is fully usable with this feature disabled
 
 **Exit criteria**
-- With the network disconnected mid-performance, audio continues without a glitch.
-- Added end-to-end latency does not affect playability because the engine plays ahead of the model.
+- Each seed prompt produces a valid, visible, editable policy whose offline render matches the documented behaviour.
+- The same saved policy, seed, source, and render settings reproduce the same result in the tested engine build, without a new model call.
+- Disabling inference or disconnecting a hosted model during playback does not interrupt audio or the active local policy.
+- Malformed, late, and stale results leave the active policy intact, and applying a valid update satisfies the real-time engine's callback budget.
 
 ---
 
@@ -297,6 +331,7 @@ Layers 7 and 9 both depend only on Layer 6, so they can proceed in either order 
 
 | Milestone | Reached when |
 |---|---|
+| **Load and verify a WAV** | Initial offline Layer 1 scope met; recorded 10 October 2026 |
 | **Hear a grain** | Layer 3 exit criteria met |
 | **Hear a texture** | Layer 4 exit criteria met |
 | **Play it live** | Layer 5 exit criteria met |

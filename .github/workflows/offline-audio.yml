@@ -1,0 +1,39 @@
+# Validate only the offline targets. Plugin/DAW testing is a separate future gate.
+name: Offline audio
+
+# Run for pull requests and updates to main. Feature-branch pushes without an
+# open PR are not independently selected by the push trigger below.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Checkout needs repository read access; these jobs do not push or publish builds.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false # Let one OS finish even when the other job fails.
+      matrix:
+        # Two independent jobs catch differences between Linux and macOS builds.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4 # Check out the Drizel revision selected by the event.
+      - name: Check out JUCE 8.0.15
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          # Pin framework source to a specific commit for reproducible inputs.
+          ref: 91ad83ae34a81e0833b1a2b0866f54846370ae53
+          path: build-deps/JUCE
+      # Quote the absolute dependency path so shell whitespace cannot split it.
+      # Each job has its own build directory; Debug retains development asserts.
+      - name: Configure offline targets
+        run: cmake -S . -B build -DDRIZEL_JUCE_PATH="$GITHUB_WORKSPACE/build-deps/JUCE" -DCMAKE_BUILD_TYPE=Debug
+      - name: Build # Two compiler tasks at a time keep module-build memory bounded.
+        run: cmake --build build --parallel 2
+      - name: Test # Report captured executable output if a test fails.
+        run: ctest --test-dir build --output-on-failure

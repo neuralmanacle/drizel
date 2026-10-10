@@ -1,22 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!--
+  Projucer project description, not C++ source. Projucer reads these settings to
+  regenerate IDE projects under Builds/ and generated glue under JuceLibraryCode/.
+  The independent root CMakeLists.txt builds the offline experiment and tests.
+  Comments may be rewritten by Projucer when this file is saved again.
+-->
 <JUCERPROJECT id="KI85iV" name="drizel" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
               companyName="Neural Manacle" companyEmail="neuralmanacle@gmail.com"
               pluginCharacteristicsValue="pluginIsSynth" pluginName="drizel"
               pluginDesc="a custom granular synthesizer" pluginManufacturer="Neural Manacle"
               pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aumu'">
+  <!-- Project-tree membership is explicit; adding a folder on disk alone
+       does not add its files here. All tracked repository files are listed
+       for browsing. Only the original processor/editor .cpp files compile
+       in this plugin target. The offline WAV adapter, experiment, and tests
+       retain compile=0 and are built by the independent CMake targets. -->
   <MAINGROUP id="V6hoLt" name="drizel">
     <GROUP id="{8C8E4C0B-D092-CD25-2D76-652A4A441C67}" name="src">
-      <FILE id="B98COC" name="PluginProcessor.cpp" compile="1" resrc="0"
-            file="src/PluginProcessor.cpp"/>
-      <FILE id="gOuKjo" name="PluginProcessor.h" compile="0" resrc="0"
-            file="src/PluginProcessor.h"/>
-      <FILE id="gqNcRR" name="PluginEditor.cpp" compile="1" resrc="0"
-            file="src/PluginEditor.cpp"/>
-      <FILE id="pLXkd7" name="PluginEditor.h" compile="0" resrc="0" file="src/PluginEditor.h"/>
+      <FILE id="B98COC" name="PluginProcessor.cpp" compile="1" resrc="0" file="src/PluginProcessor.cpp" />
+      <FILE id="gOuKjo" name="PluginProcessor.h" compile="0" resrc="0" file="src/PluginProcessor.h" />
+      <FILE id="gqNcRR" name="PluginEditor.cpp" compile="1" resrc="0" file="src/PluginEditor.cpp" />
+      <FILE id="pLXkd7" name="PluginEditor.h" compile="0" resrc="0" file="src/PluginEditor.h" />
+      <GROUP id="D17ff8" name="audio">
+        <FILE id="D7fd6c" name="SampleBuffer.h" compile="0" resrc="0" file="src/audio/SampleBuffer.h" />
+      </GROUP>
+      <GROUP id="D7bca5" name="io">
+        <FILE id="D4dd87" name="WavFile.cpp" compile="0" resrc="0" file="src/io/WavFile.cpp" />
+        <FILE id="D9541b" name="WavFile.h" compile="0" resrc="0" file="src/io/WavFile.h" />
+      </GROUP>
     </GROUP>
+    <GROUP id="D2492d" name="experiments">
+      <GROUP id="D1cd88" name="wav-roundtrip">
+        <FILE id="D2cc73" name="README.md" compile="0" resrc="0" file="experiments/wav-roundtrip/README.md" />
+        <FILE id="Db7732" name="main.cpp" compile="0" resrc="0" file="experiments/wav-roundtrip/main.cpp" />
+      </GROUP>
+    </GROUP>
+    <GROUP id="D152af" name="tests">
+      <FILE id="D32d9a" name="AudioDataTests.cpp" compile="0" resrc="0" file="tests/AudioDataTests.cpp" />
+    </GROUP>
+    <GROUP id="D5a860" name="docs">
+      <FILE id="Db19cf" name="architecture.md" compile="0" resrc="0" file="docs/architecture.md" />
+      <GROUP id="Dbd2d6" name="assets">
+        <FILE id="D95404" name="drizel-logo.jpg" compile="0" resrc="0" file="docs/assets/drizel-logo.jpg" />
+      </GROUP>
+      <FILE id="Def3cd" name="audio-data.md" compile="0" resrc="0" file="docs/audio-data.md" />
+      <FILE id="D3f877" name="code-guide.md" compile="0" resrc="0" file="docs/code-guide.md" />
+      <FILE id="D18d12" name="roadmap.md" compile="0" resrc="0" file="docs/roadmap.md" />
+    </GROUP>
+    <GROUP id="Dec093" name="learnings">
+      <FILE id="D02643" name="README.md" compile="0" resrc="0" file="learnings/README.md" />
+      <FILE id="D2be38" name="prerequisites.md" compile="0" resrc="0" file="learnings/prerequisites.md" />
+    </GROUP>
+    <GROUP id="D791d2" name=".github">
+      <GROUP id="D426b8" name="workflows">
+        <FILE id="Da41e4" name="offline-audio.yml" compile="0" resrc="0" file=".github/workflows/offline-audio.yml" />
+      </GROUP>
+    </GROUP>
+    <FILE id="D6b9ee" name=".gitignore" compile="0" resrc="0" file=".gitignore" />
+    <FILE id="D6f967" name="CMakeLists.txt" compile="0" resrc="0" file="CMakeLists.txt" />
+    <FILE id="D93717" name="LICENSE" compile="0" resrc="0" file="LICENSE" />
+    <FILE id="D8c6e4" name="README.md" compile="0" resrc="0" file="README.md" />
   </MAINGROUP>
+  <!-- Framework module declarations. useGlobalPath tells Projucer to consult
+       its module-path settings; useLocalCopy=0 avoids vendoring module copies.
+       This starter module list is broader than the three-module offline build. -->
   <MODULES>
     <MODULE id="juce_analytics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_animation" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -46,7 +95,14 @@
             useGlobalPath="1"/>
     <MODULE id="juce_video" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
   </MODULES>
+  <!-- Compile-time framework options, used when generating the plugin project.
+       Strict reference-counted pointers strengthen that API's rules; disabling
+       VST3 replacement avoids presenting this VST3 as a legacy VST2 replacement. -->
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
+  <!-- The current exporter generates an Xcode project for macOS. Debug and
+       Release share the drizel target name and a macOS 14.0 deployment setting.
+       Plugin identity/capability attributes above determine generated macros;
+       pluginIsSynth does not by itself implement grain synthesis or MIDI notes. -->
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX">
       <CONFIGURATIONS>
@@ -55,6 +111,8 @@
         <CONFIGURATION isDebug="0" name="Release" targetName="drizel" macOSDeploymentTarget="14.0"
                        osxCompatibility="14.0 SDK"/>
       </CONFIGURATIONS>
+      <!-- Exporter module-path entries: check their resolution in Projucer on
+           your own machine. They do not configure DRIZEL_JUCE_PATH in CMake. -->
       <MODULEPATHS>
         <MODULEPATH id="juce_analytics" path="../../../JUCE/modules"/>
         <MODULEPATH id="juce_animation" path="../../../JUCE/modules"/>
