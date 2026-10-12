@@ -70,6 +70,12 @@ target_compile_options(drizel_wav_roundtrip PRIVATE ${DRIZEL_WARNINGS})
 # Configure with -DBUILD_TESTING=OFF to build just the library and experiment.
 include(CTest)
 if(BUILD_TESTING)
+    # DSP primitives use only the standard library and our core include path.
+    add_executable(drizel_signal_tests tests/SignalPrimitiveTests.cpp)
+    target_link_libraries(drizel_signal_tests PRIVATE drizel_core)
+    target_compile_options(drizel_signal_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME signal_primitives COMMAND drizel_signal_tests)
+
     add_executable(drizel_audio_tests tests/AudioDataTests.cpp)
     target_link_libraries(drizel_audio_tests PRIVATE drizel_wav)
     target_compile_options(drizel_audio_tests PRIVATE ${DRIZEL_WARNINGS})

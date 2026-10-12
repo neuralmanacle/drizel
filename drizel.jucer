@@ -24,6 +24,8 @@
       <FILE id="gqNcRR" name="PluginEditor.cpp" compile="1" resrc="0" file="src/PluginEditor.cpp" />
       <FILE id="pLXkd7" name="PluginEditor.h" compile="0" resrc="0" file="src/PluginEditor.h" />
       <GROUP id="D17ff8" name="audio">
+        <FILE id="DrzWin" name="Window.h" compile="0" resrc="0" file="src/audio/Window.h" />
+        <FILE id="DrzInt" name="Interpolation.h" compile="0" resrc="0" file="src/audio/Interpolation.h" />
         <FILE id="D7fd6c" name="SampleBuffer.h" compile="0" resrc="0" file="src/audio/SampleBuffer.h" />
       </GROUP>
       <GROUP id="D7bca5" name="io">
@@ -38,9 +40,11 @@
       </GROUP>
     </GROUP>
     <GROUP id="D152af" name="tests">
+      <FILE id="DrzSig" name="SignalPrimitiveTests.cpp" compile="0" resrc="0" file="tests/SignalPrimitiveTests.cpp" />
       <FILE id="D32d9a" name="AudioDataTests.cpp" compile="0" resrc="0" file="tests/AudioDataTests.cpp" />
     </GROUP>
     <GROUP id="D5a860" name="docs">
+      <FILE id="DrzNot" name="signal-primitives.md" compile="0" resrc="0" file="docs/signal-primitives.md" />
       <FILE id="Db19cf" name="architecture.md" compile="0" resrc="0" file="docs/architecture.md" />
       <GROUP id="Dbd2d6" name="assets">
         <FILE id="D95404" name="drizel-logo.jpg" compile="0" resrc="0" file="docs/assets/drizel-logo.jpg" />
