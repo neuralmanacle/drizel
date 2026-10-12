@@ -86,14 +86,14 @@ remains tracked here; this does not claim a finished sample-loading UI or engine
 **Goal:** The small, independently testable building blocks every grain will use.
 
 ### 2.1 Windows
-- [ ] Hann window
+- [x] Symmetric Hann window (offline table preparation; explicit short-length policy)
 - [ ] At least one alternative (for example Tukey or triangular) behind the same interface
-- [ ] Precomputed window tables, so grains never compute windows per sample
+- [x] Precomputed Hann window tables; future grains can reuse them without per-sample cosine calls
 
 ### 2.2 Interpolation
-- [ ] Linear interpolation at fractional read positions
+- [x] Linear interpolation at fractional read positions
 - [ ] Higher-order interpolation (for example cubic Hermite) behind the same interface
-- [ ] Defined behaviour at buffer boundaries (clamp, wrap, or zero, chosen and documented)
+- [x] Zero-padded source boundaries, including fractional blends with silence
 
 ### 2.3 Utilities
 - [ ] Semitone/cents to playback-rate conversion
@@ -105,8 +105,12 @@ remains tracked here; this does not claim a finished sample-loading UI or engine
 - [ ] Compare window shapes on a repeated short grain
 
 **Tests**
-- [ ] Windows: correct length, endpoints, symmetry, expected overlap-sum behaviour
-- [ ] Interpolation: exact at integer positions, correct at midpoints, safe at boundaries
+- [x] Hann: correct length, endpoints, symmetry, expected overlap-sum behaviour
+- [x] Linear interpolation: exact at integer positions, correct at midpoints, safe at boundaries
+
+The first increment is documented in [signal primitives](signal-primitives.md).
+Alternative windows, higher-order interpolation, utilities, and the listening/
+spectral experiments remain open; Layer 2 is not complete.
 
 **Exit criteria**
 - Each primitive has tests and a short note in `docs/` on its trade-offs.

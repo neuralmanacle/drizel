@@ -160,6 +160,12 @@ walkthrough and [the audio-data design](docs/audio-data.md) for the decisions.
 For detailed function comments, C++ ownership explanations, and a file-by-file
 reading order, start with [the commented-code guide](docs/code-guide.md).
 
+The first DSP primitives are a precomputed symmetric Hann envelope and linear
+interpolation with zero-padded source boundaries. Their ten-case test executable
+runs through CTest as `signal_primitives`. Read [the signal-primitives guide](docs/signal-primitives.md)
+for the maths, boundary examples, and a JUCE-independent test command. A grain
+voice and audio rendering with these primitives remain the next engine work.
+
 ### Plugin requirements
 
 - JUCE with Projucer
