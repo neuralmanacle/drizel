@@ -3,6 +3,7 @@
 #include "audio/Window.h"
 
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -79,6 +80,55 @@ void integerAndFractionalReads()
     near(drizel::readLinear(data.data(), data.size(), 2.75), 4.5, "three-quarter point");
 }
 
+void hermiteInterpolation()
+{
+    // These samples lie on y=x^2 at x=-1,0,1,2,3. Catmull-Rom tangents
+    // reproduce this quadratic exactly inside the segment from x=0 to x=1.
+    const std::array<float, 5> quadratic{1.0f, 0.0f, 1.0f, 4.0f, 9.0f};
+    near(drizel::readHermite(quadratic.data(), quadratic.size(), 1.25), 0.0625,
+         "Hermite reconstructs a quadratic between samples");
+    near(drizel::readSample(quadratic.data(), quadratic.size(), 1.25), 0.25,
+         "default interpolation mode remains linear");
+    near(drizel::readSample(quadratic.data(), quadratic.size(), 1.25,
+                            drizel::InterpolationMode::hermite), 0.0625,
+         "mode selector dispatches to Hermite");
+
+    for (std::size_t i = 0; i < quadratic.size(); ++i)
+        require(drizel::readHermite(quadratic.data(), quadratic.size(),
+                                    static_cast<double>(i)) == quadratic[i],
+                "integer positions preserve the stored sample exactly");
+
+    const std::array<float, 5> ramp{0.0f, 2.0f, 4.0f, 6.0f, 8.0f};
+    for (double position : {1.5, 2.5})
+        near(drizel::readHermite(ramp.data(), ramp.size(), position), position * 2.0,
+             "Hermite preserves an interior linear ramp");
+}
+
+void hermiteEdgesAndSafety()
+{
+    const std::array<float, 2> data{2.0f, 4.0f};
+    near(drizel::readHermite(data.data(), data.size(), -1.0), 0.0,
+         "Hermite is silent before zero-padded support");
+    near(drizel::readHermite(data.data(), data.size(), 2.0), 0.0,
+         "Hermite is silent after zero-padded support");
+    require(std::isfinite(drizel::readHermite(data.data(), data.size(), -0.5)),
+            "leading zero-padded interpolation is finite");
+    require(std::isfinite(drizel::readHermite(data.data(), data.size(), 1.5)),
+            "trailing zero-padded interpolation is finite");
+    require(drizel::readHermite(nullptr, 2, 0.5) == 0.0f,
+            "null channel returns silence");
+    require(drizel::readHermite(data.data(), 0, 0.5) == 0.0f,
+            "empty channel returns silence");
+    require(drizel::readHermite(data.data(), data.size(),
+                std::numeric_limits<double>::quiet_NaN()) == 0.0f,
+            "non-finite position returns silence");
+
+    const auto maximum = std::numeric_limits<float>::max();
+    const std::array<float, 4> extremes{maximum, -maximum, maximum, -maximum};
+    require(std::isfinite(drizel::readHermite(extremes.data(), extremes.size(), 0.25)),
+            "finite float inputs cannot overflow the Hermite result");
+}
+
 void zeroPadding()
 {
     const std::array<float, 2> data{2.0f, 4.0f};
@@ -143,7 +193,9 @@ int main()
     const Test tests[]{
         {"small windows", smallWindows}, {"known windows", knownWindows},
         {"window properties", windowProperties}, {"overlap convention", overlapConvention},
-        {"integer and fractional reads", integerAndFractionalReads}, {"zero padding", zeroPadding},
+        {"integer and fractional reads", integerAndFractionalReads},
+        {"Hermite interpolation", hermiteInterpolation},
+        {"Hermite edges and safety", hermiteEdgesAndSafety}, {"zero padding", zeroPadding},
         {"invalid reads", invalidReads}, {"finite headroom", finiteHeadroom},
         {"stereo buffer reads", stereoBufferReads}, {"rate traversal", rateTraversal}};
     int failed = 0;
