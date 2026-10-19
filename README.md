@@ -66,9 +66,9 @@ scope, example interpretations, execution design, and experiments still needed.
 ### 1. Core DSP
 
 - [x] Load WAV files into an audio buffer (offline, mono/stereo PCM16, PCM24, float32)
-- [ ] Generate a single windowed grain
-- [ ] Implement interpolation for variable-rate playback
-- [ ] Schedule and mix overlapping grains
+- [x] Generate a single windowed grain
+- [x] Implement interpolation for variable-rate playback
+- [x] Schedule and mix overlapping grains
 
 ### 2. Real-time engine
 
