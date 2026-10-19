@@ -145,24 +145,27 @@ spectral experiments remain open; Layer 2 is not complete.
 
 ## Layer 4: Many grains
 
+> Step 5 adds an offline implementation: see [grain cloud](grain-cloud.md).
+> Target-machine listening and worst-case timing validation remain open.
+
 **Goal:** A scheduler and mixer that turn single grains into a texture, still offline.
 
-- [ ] Fixed-capacity grain pool (no allocation after startup)
-- [ ] Grain scheduler: trigger by density (grains per second) and by interval
-- [ ] Timing variation (jitter) around the nominal interval
-- [ ] Per-grain parameter variation: position spread, pitch spread, length, pan
-- [ ] Overlap-add mixing of all active grains
-- [ ] Defined behaviour when the pool is full (drop oldest, drop new, or steal quietest)
-- [ ] Gain compensation so output level stays sensible as overlap changes
+- [x] Fixed-capacity grain pool (no allocation after startup)
+- [x] Grain scheduler: trigger by density (grains per second) and by interval
+- [x] Timing variation (jitter) around the nominal interval
+- [x] Per-grain parameter variation: position spread, pitch spread, length, pan
+- [x] Overlap-add mixing of all active grains
+- [x] Defined behaviour when the pool is full (drop oldest, drop new, or steal quietest)
+- [x] Gain compensation so output level stays sensible as overlap changes
 
 **Experiments**
 - [ ] Render textures from the same sample at low, medium, and high density
 - [ ] Measure CPU cost per grain offline to estimate a safe maximum
 
 **Tests**
-- [ ] Seeded runs are bit-for-bit reproducible
-- [ ] Active grain count never exceeds pool capacity
-- [ ] Output never exceeds a defined peak at maximum density
+- [x] Seeded runs are bit-for-bit reproducible within the same build
+- [x] Active grain count never exceeds pool capacity
+- [x] Output never exceeds a defined peak at maximum density
 
 **Exit criteria**
 - The engine renders a controllable granular texture to a file from a single function call.

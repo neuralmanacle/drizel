@@ -132,3 +132,19 @@ if(BUILD_TESTING)
     add_test(NAME roundtrip_usage COMMAND drizel_wav_roundtrip)
     set_tests_properties(roundtrip_usage PROPERTIES WILL_FAIL TRUE)
 endif()
+
+# Offline Step 5 experiment: WAV adapter supplies I/O and core headers.
+add_executable(drizel_grain_cloud experiments/grain-cloud/main.cpp)
+target_link_libraries(drizel_grain_cloud PRIVATE drizel_wav)
+target_compile_options(drizel_grain_cloud PRIVATE ${DRIZEL_WARNINGS})
+
+if(BUILD_TESTING)
+    # Core-only numerical checks need no audio device or GUI.
+    add_executable(drizel_cloud_tests tests/GrainCloudTests.cpp)
+    target_link_libraries(drizel_cloud_tests PRIVATE drizel_core)
+    target_compile_options(drizel_cloud_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME grain_cloud COMMAND drizel_cloud_tests)
+    # Missing arguments must produce a nonzero exit code.
+    add_test(NAME grain_cloud_usage COMMAND drizel_grain_cloud)
+    set_tests_properties(grain_cloud_usage PROPERTIES WILL_FAIL TRUE)
+endif()
