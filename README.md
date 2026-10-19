@@ -224,9 +224,3 @@ Drizel is licensed under the GNU Affero General Public License,
 version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
-
-## Step 5: offline grain textures
-
-The [grain-cloud guide](docs/grain-cloud.md) explains the fixed-capacity pool,
-seeded scheduler, overlap mixer, build commands and listening experiment.
-Run `drizel_grain_cloud` after building the offline targets.
