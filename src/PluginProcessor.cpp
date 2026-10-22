@@ -1,215 +1,155 @@
-/*
-  ==============================================================================
-
-    Host callback implementation for the starter Drizel plugin.
-    See PluginProcessor.h for the API contracts and src/io/WavFile.h for the
-    separate offline sample-loading API. The two paths are not connected yet.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "io/WavFile.h"
 
-//==============================================================================
-// Compile-time flags select the constructor's bus configuration. A synth has
-// stereo output without audio input. An effect also has stereo input; a MIDI
-// effect skips audio buses. With preferred configurations the base default is used.
-DrizelAudioProcessor::DrizelAudioProcessor()
-#ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
-#endif
+juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makeParameters()
 {
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"position", 1}, "Position", 0.0f, 1.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"pitch", 1}, "Pitch (semitones)", -24.0f, 24.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"density", 1}, "Density (grains/sec)", 1.0f, 100.0f, 20.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"gain", 1}, "Output gain", 0.0f, 1.0f, 0.8f));
+    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{"play", 1}, "Play", true));
+    return layout; // Construction and allocations occur before playback.
 }
 
+DrizelAudioProcessor::DrizelAudioProcessor()
+    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      Thread("Drizel sample loader"), parameters(*this, nullptr, "DrizelState", makeParameters())
+{
+    static_assert(std::atomic<float>::is_always_lock_free, "Parameters must be lock-free");
+    position = parameters.getRawParameterValue("position");
+    pitch = parameters.getRawParameterValue("pitch");
+    density = parameters.getRawParameterValue("density");
+    gain = parameters.getRawParameterValue("gain");
+    play = parameters.getRawParameterValue("play");
+    startThread(); // No thread creation is deferred into the callback.
+}
 DrizelAudioProcessor::~DrizelAudioProcessor()
 {
-    // Member and base destructors perform their own RAII cleanup. No custom
-    // engine, background loader, or source-buffer ownership has been added yet.
+    signalThreadShouldExit(); // The host has stopped processing before destruction.
+    notify(); // Wake a sleeping loader immediately.
+    stopThread(-1); // Join without killing a worker that may own sample memory.
 }
-
-//==============================================================================
-const juce::String DrizelAudioProcessor::getName() const
+void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
 {
-    // Projucer supplies this macro; keeping one setting avoids duplicate names.
-    return JucePlugin_Name;
+    engine.prepare(sampleRate); // The host guarantees processing is stopped here.
+    const juce::ScopedLock lock(requestLock);
+    requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
+    ++revision;
+    notify();
 }
-
-// These capability queries describe the generated build configuration. Their
-// preprocessor branches are chosen at compile time, not by runtime user controls.
-// Advertising MIDI input in a later build will not by itself implement synthesis.
-bool DrizelAudioProcessor::acceptsMidi() const
+bool DrizelAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
-    return false;
-   #endif
+    return layouts.getMainInputChannelSet().isDisabled()
+        && (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::mono()
+            || layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo());
 }
-
-bool DrizelAudioProcessor::producesMidi() const
+void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
-   #if JucePlugin_ProducesMidiOutput
-    return true;
-   #else
-    return false;
-   #endif
-}
-
-bool DrizelAudioProcessor::isMidiEffect() const
-{
-   #if JucePlugin_IsMidiEffect
-    return true;
-   #else
-    return false;
-   #endif
-}
-
-double DrizelAudioProcessor::getTailLengthSeconds() const
-{
-    // Update when an actual release envelope or effect tail exists.
-    return 0.0;
-}
-
-int DrizelAudioProcessor::getNumPrograms()
-{
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
-}
-
-int DrizelAudioProcessor::getCurrentProgram()
-{
-    // This is a host compatibility stub, not a selected synth preset.
-    return 0;
-}
-
-void DrizelAudioProcessor::setCurrentProgram (int index)
-{
-    // No preset bank exists, so index currently has no effect.
-}
-
-const juce::String DrizelAudioProcessor::getProgramName (int index)
-{
-    // {} value-initialises an empty String; there is no name to look up yet.
-    return {};
-}
-
-void DrizelAudioProcessor::changeProgramName (int index, const juce::String& newName)
-{
-    // Neither index nor the borrowed name is stored by the current scaffold.
-}
-
-//==============================================================================
-void DrizelAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    // Future preparation will pass the host rate to the engine and preallocate
-    // processing storage. sampleRate describes output timing, not a loaded WAV's
-    // source rate. The current scaffold has no engine to prepare.
-}
-
-void DrizelAudioProcessor::releaseResources()
-{
-    // Future code may release resources prepared for playback. The processor
-    // can remain alive and later receive prepareToPlay again. Currently empty.
-}
-
-#ifndef JucePlugin_PreferredChannelConfigurations
-bool DrizelAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
-{
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
-    return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-   #endif
-
-    return true;
-  #endif
-}
-#endif
-
-void DrizelAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
-    // A stack RAII guard changes supported CPU denormal handling for this scope
-    // and restores the previous state at return. It is not a limiter or filter.
-    juce::ScopedNoDenormals noDenormals;
-    // Channel counts describe this processor's configured audio buses. The
-    // buffer length must be read each callback because host block sizes can vary.
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    // Output-only channels may contain uninitialised host memory, so initialise
-    // them before returning. In the configured synth build input count is zero:
-    // this loop clears every output channel and the instrument remains silent.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This inherited effect-template loop currently does no DSP. It visits no
-    // channels in the synth build because there are no inputs. Future synthesis
-    // must render the output channels explicitly. midiMessages is also unused.
-    // Never call loadWav/writeWav here: they allocate, block, and can throw.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    juce::ScopedNoDenormals noDenormals; // Avoid expensive subnormal arithmetic.
+    buffer.clear(); // Also initialise any unexpected extra channels.
+    midi.clear(); // This free-running texture does not produce MIDI.
+    if (buffer.getNumChannels() == 0)
+        return;
+    const auto pos = position->load(), semitones = pitch->load(); // One atomic snapshot per block.
+    const auto grains = density->load(), level = gain->load() * play->load();
+    auto* left = buffer.getWritePointer(0); // Borrow only for this callback.
+    auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
+    for (int i = 0; i < buffer.getNumSamples(); ++i) // No assumed maximum block size.
     {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // channelData borrows host storage for this callback only. A later
-        // effect implementation could process buffer.getNumSamples() values;
-        // this placeholder deliberately performs no writes.
+        const auto frame = engine.next(pos, semitones, grains, level);
+        left[i] = right != nullptr ? frame.left : 0.5f * (frame.left + frame.right);
+        if (right != nullptr)
+            right[i] = frame.right;
     }
 }
-
-//==============================================================================
-bool DrizelAudioProcessor::hasEditor() const
+void DrizelAudioProcessor::requestSample(const juce::File& file)
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    const juce::ScopedLock lock(requestLock);
+    requestedPath = file.getFullPathName(); // No decode on the UI thread.
+    status = "Loading " + file.getFileName();
+    ++revision; // Newest request wins if a previous decode is still running.
+    notify();
 }
-
+juce::String DrizelAudioProcessor::loadStatus()
+{
+    const juce::ScopedLock lock(requestLock);
+    return status;
+}
+void DrizelAudioProcessor::run()
+{
+    std::uint64_t handled = 0; // Only the loader reads/writes this local revision.
+    while (!threadShouldExit())
+    {
+        engine.collect(); // Free old sources/windows on this background thread.
+        juce::String path;
+        double rate;
+        std::uint64_t job;
+        {
+            const juce::ScopedLock lock(requestLock);
+            path = requestedPath;
+            rate = requestedRate;
+            job = revision; // Snapshot the entire request under one lock.
+        }
+        if (job != handled && rate > 0.0)
+        {
+            handled = job; // Failed jobs wait for an explicit new request.
+            try
+            {
+                auto sample = path.isEmpty() ? drizel::SampleBuffer(1, 1, rate)
+                    : drizel::loadWav(std::filesystem::u8path(path.toStdString()));
+                auto ready = std::make_unique<drizel::PreparedSample>(std::move(sample), rate);
+                const juce::ScopedLock lock(requestLock);
+                if (job == revision && !threadShouldExit())
+                {
+                    engine.publish(std::move(ready)); // Atomic ownership transfer.
+                    status = path.isEmpty() ? "Load a WAV to begin"
+                                            : "Ready: " + juce::File(path).getFileName();
+                }
+            }
+            catch (const std::exception& error)
+            {
+                const juce::ScopedLock lock(requestLock);
+                if (job == revision)
+                    status = "Load failed: " + juce::String(error.what()); // Current audio continues.
+            }
+        }
+        wait(20); // Poll reclamation even when no new file is requested.
+    }
+    engine.collect(); // Final reclamation before thread exit.
+}
+void DrizelAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
+{
+    auto state = parameters.copyState(); // Host state callbacks are outside processBlock.
+    {
+        const juce::ScopedLock lock(requestLock);
+        state.setProperty("samplePath", requestedPath, nullptr);
+    }
+    if (auto xml = state.createXml())
+        copyXmlToBinary(*xml, destination);
+}
+void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
+{
+    if (auto xml = getXmlFromBinary(data, bytes))
+    {
+        auto state = juce::ValueTree::fromXml(*xml);
+        if (state.hasType(parameters.state.getType()))
+        {
+            parameters.replaceState(state); // JUCE updates the atomic parameter values.
+            const auto path = state.getProperty("samplePath").toString();
+            const juce::ScopedLock lock(requestLock);
+            requestedPath = path; // An empty saved path also replaces the old source.
+            status = path.isEmpty() ? "Load a WAV to begin" : "Restoring sample...";
+            ++revision;
+            notify(); // Decode/clear remains asynchronous.
+        }
+    }
+}
 juce::AudioProcessorEditor* DrizelAudioProcessor::createEditor()
 {
-    // *this passes the existing processor by reference, without copying it.
-    // JUCE/the host owns the returned editor; its reference back to us is borrowed.
-    return new DrizelAudioProcessorEditor (*this);
+    return new DrizelAudioProcessorEditor(*this); // Host owns the editor lifetime.
 }
-
-//==============================================================================
-void DrizelAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
-    // No serialisation is implemented: destData is left unchanged. Future state
-    // should contain a versioned parameter/sample-reference representation and
-    // must coordinate with any state used concurrently by the audio callback.
-}
-
-void DrizelAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    // No deserialisation is implemented. A future reader must check length,
-    // version, and values before using the host-owned bytes, and safely hand any
-    // replacement engine state to processing. Do not retain the raw data pointer.
-}
-
-//==============================================================================
-/** Factory called by JUCE's plugin wrapper when the host creates an instance.
- * The wrapper takes ownership of the new processor. Returning a base-class
- * pointer allows JUCE to dispatch our overrides polymorphically. JUCE_CALLTYPE
- * supplies the calling convention required by the framework/platform.
- */
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new DrizelAudioProcessor();

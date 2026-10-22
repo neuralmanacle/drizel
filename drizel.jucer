@@ -11,12 +11,11 @@
               companyName="Neural Manacle" companyEmail="neuralmanacle@gmail.com"
               pluginCharacteristicsValue="pluginIsSynth" pluginName="drizel"
               pluginDesc="a custom granular synthesizer" pluginManufacturer="Neural Manacle"
-              pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aumu'">
+              pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aumu'" cppLanguageStandard="17" headerPath="src">
   <!-- Project-tree membership is explicit; adding a folder on disk alone
        does not add its files here. All tracked repository files are listed
-       for browsing. Only the original processor/editor .cpp files compile
-       in this plugin target. The offline WAV adapter, experiment, and tests
-       retain compile=0 and are built by the independent CMake targets. -->
+       for browsing. Processor/editor and WAV adapter .cpp files compile in the plugin.
+       Experiments and tests remain independent CMake targets. -->
   <MAINGROUP id="V6hoLt" name="drizel">
     <GROUP id="{8C8E4C0B-D092-CD25-2D76-652A4A441C67}" name="src">
       <FILE id="B98COC" name="PluginProcessor.cpp" compile="1" resrc="0" file="src/PluginProcessor.cpp" />
@@ -24,12 +23,16 @@
       <FILE id="gqNcRR" name="PluginEditor.cpp" compile="1" resrc="0" file="src/PluginEditor.cpp" />
       <FILE id="pLXkd7" name="PluginEditor.h" compile="0" resrc="0" file="src/PluginEditor.h" />
       <GROUP id="D17ff8" name="audio">
+        <FILE id="Rt0" name="Grain.h" compile="0" resrc="0" file="src/audio/Grain.h" />
+        <FILE id="Rt1" name="GrainCloud.h" compile="0" resrc="0" file="src/audio/GrainCloud.h" />
+        <FILE id="Rt2" name="RealtimeEngine.h" compile="0" resrc="0" file="src/audio/RealtimeEngine.h" />
+
         <FILE id="DrzWin" name="Window.h" compile="0" resrc="0" file="src/audio/Window.h" />
         <FILE id="DrzInt" name="Interpolation.h" compile="0" resrc="0" file="src/audio/Interpolation.h" />
         <FILE id="D7fd6c" name="SampleBuffer.h" compile="0" resrc="0" file="src/audio/SampleBuffer.h" />
       </GROUP>
       <GROUP id="D7bca5" name="io">
-        <FILE id="D4dd87" name="WavFile.cpp" compile="0" resrc="0" file="src/io/WavFile.cpp" />
+        <FILE id="D4dd87" name="WavFile.cpp" compile="1" resrc="0" file="src/io/WavFile.cpp" />
         <FILE id="D9541b" name="WavFile.h" compile="0" resrc="0" file="src/io/WavFile.h" />
       </GROUP>
     </GROUP>

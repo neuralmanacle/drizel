@@ -1,5 +1,5 @@
-# Validate only the offline targets. Plugin/DAW testing is a separate future gate.
-name: Offline audio
+# Validate offline/live core tests on both OSes and compile plugin formats on macOS.
+name: Audio engine and plugin
 
 # Run for pull requests and updates to main. Feature-branch pushes without an
 # open PR are not independently selected by the push trigger below.
@@ -31,8 +31,8 @@ jobs:
           path: build-deps/JUCE
       # Quote the absolute dependency path so shell whitespace cannot split it.
       # Each job has its own build directory; Debug retains development asserts.
-      - name: Configure offline targets
-        run: cmake -S . -B build -DDRIZEL_JUCE_PATH="$GITHUB_WORKSPACE/build-deps/JUCE" -DCMAKE_BUILD_TYPE=Debug
+      - name: Configure targets
+        run: cmake -S . -B build -DDRIZEL_JUCE_PATH="$GITHUB_WORKSPACE/build-deps/JUCE" -DCMAKE_BUILD_TYPE=Debug -DDRIZEL_BUILD_PLUGIN=${{ runner.os == 'macOS' && 'ON' || 'OFF' }}
       - name: Build # Two compiler tasks at a time keep module-build memory bounded.
         run: cmake --build build --parallel 2
       - name: Test # Report captured executable output if a test fails.

@@ -10,10 +10,11 @@ An experimental part of the vision is **promptable modulation**: describe how
 the sound should move, then let a model translate that intention into an editable
 modulation policy. Grain scanning is the first proposed use case.
 
-> **Status — 10 October 2026:** The first offline WAV loading and saving milestone
-> has passed automated tests on the maintainer's Mac and a real-file round trip.
-> Grain synthesis, live playback, the sample-loading UI, and promptable modulation
-> are still planned. See the [development log](docs/devlog/2026-10-10.md).
+> **Status — 22 October 2026:** Step 6 connects the grain cloud to live JUCE
+> playback with background WAV loading and smoothed controls. Automated core
+> tests pass; target-machine listening and worst-case callback timing remain
+> open. MIDI and promptable modulation are still planned. See the
+> [Step 6 implementation guide](docs/realtime-engine.md).
 
 ## About
 
@@ -72,8 +73,8 @@ scope, example interpretations, execution design, and experiments still needed.
 
 ### 2. Real-time engine
 
-- [ ] Integrate the engine with real-time audio processing
-- [ ] Add playback position and pitch modulation
+- [x] Integrate the engine with real-time audio processing
+- [x] Add live playback position and pitch controls (modulation sources come later)
 - [ ] Validate processing behaviour and performance
 
 ### 3. Instrument and interface
@@ -163,8 +164,8 @@ reading order, start with [the commented-code guide](docs/code-guide.md).
 The first DSP primitives are a precomputed symmetric Hann envelope and linear
 interpolation with zero-padded source boundaries. Their ten-case test executable
 runs through CTest as `signal_primitives`. Read [the signal-primitives guide](docs/signal-primitives.md)
-for the maths, boundary examples, and a JUCE-independent test command. A grain
-voice and audio rendering with these primitives remain the next engine work.
+for the maths, boundary examples, and a JUCE-independent test command. These
+primitives now power the single grain, cloud and live engine.
 
 ### Plugin requirements
 
@@ -188,11 +189,10 @@ file on disk does not automatically register it with Projucer. Add future files
 through its File explorer's **+** or group context menu, then save the project
 to update the exported IDE project.
 
-The offline adapter, experiment, and test `.cpp` files are listed for browsing
-with **Compile disabled**. They still build through the CMake commands above.
-In particular, the experiment and test runner each define their own `main()`
-and must not be compiled into the plugin target. Only `PluginProcessor.cpp` and
-`PluginEditor.cpp` currently compile as Drizel's plugin source files.
+The experiment and test `.cpp` files have **Compile disabled** in Projucer
+and build through CMake. Their own `main()` functions must not enter the plugin.
+`PluginProcessor.cpp`, `PluginEditor.cpp` and `src/io/WavFile.cpp` compile into
+the plugin; the WAV adapter runs only on its background loader thread.
 
 ## Repository structure
 
@@ -224,3 +224,15 @@ Drizel is licensed under the GNU Affero General Public License,
 version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
+
+## Step 6: live grain cloud
+
+The plugin now loads WAV files on a background thread and renders the grain
+cloud live, with smoothed position, pitch, density, gain and Play controls.
+Sample swaps fade through silence. See [the Step 6 guide](docs/realtime-engine.md)
+for Projucer/CMake builds, ownership details and remaining listening/host checks.
+
+```sh
+cmake -S . -B build-plugin -DDRIZEL_JUCE_PATH=../JUCE -DDRIZEL_BUILD_PLUGIN=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build-plugin --parallel 2
+```

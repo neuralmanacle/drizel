@@ -99,6 +99,28 @@ public:
         source_ = &source; // Publish readiness only after all preparation succeeds.
     }
 
+    // Audio-thread-only update: existing grains keep their captured parameters.
+    // Density may only decrease from the prepared ceiling, preserving the
+    // original worst-case overlap gain bound even while old grains are alive.
+    void setLiveControls(double position, double semitones, double density) noexcept
+    {
+        if (source_ == nullptr)
+            return; // No source bounds exist until preparation succeeds.
+        if (std::isfinite(position))
+            settings_.position = std::clamp(position, 0.0,
+                static_cast<double>(source_->frameCount() - 1));
+        if (std::isfinite(semitones))
+            settings_.semitones = std::clamp(semitones,
+                -48.0 + settings_.pitchSpread, 48.0 - settings_.pitchSpread);
+        if (std::isfinite(density))
+        {
+            const double nextInterval = settings_.outputRate
+                / std::clamp(density, std::min(1.0, settings_.density), settings_.density);
+            countdown_ *= nextInterval / interval_; // Preserve scheduler phase.
+            interval_ = nextInterval; // No window preparation or source scan.
+        }
+    }
+
     GrainFrame next(bool trigger = true) noexcept // One stereo output frame.
     {
         if (source_ == nullptr)
