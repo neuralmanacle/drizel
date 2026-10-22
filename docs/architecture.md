@@ -6,7 +6,10 @@ The offline experiment loads a WAV through `src/io/WavFile.cpp` into
 `src/audio/SampleBuffer.h`, then writes a float32 WAV and compares the decoded
 samples. The buffer uses standard C++ types and retains its source sample rate.
 See [audio data and file I/O](audio-data.md) for layout, ownership, error handling,
-and the sample-rate policy. The grain-processing flow below is still planned.
+and the sample-rate policy. Steps 4–5 added the single grain and offline cloud;
+Step 6 now connects them to JUCE playback. See [real-time engine](realtime-engine.md)
+for the active/pending/retired ownership protocol, live controls and worker loader.
+The callback borrows host buffers and never decodes or destroys sample storage.
 
 ## Data flow
 

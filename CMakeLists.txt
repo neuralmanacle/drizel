@@ -18,17 +18,17 @@ if(NOT EXISTS "${DRIZEL_JUCE_PATH}/extras/Build/CMake/JUCEModuleSupport.cmake")
     message(FATAL_ERROR "Set DRIZEL_JUCE_PATH to a JUCE source checkout; see README.md")
 endif()
 
-# Import the framework's official module support without configuring Projucer
-# or GUI build tools. The juce:: prefix is a CMake target namespace, not C++ code.
-# Core supplies files/streams, audio_basics supplies sample/audio helpers, and
-# audio_formats supplies WAV readers/writers. Module metadata supplies OS links.
-include("${DRIZEL_JUCE_PATH}/extras/Build/CMake/JUCEModuleSupport.cmake")
-
-juce_add_modules(ALIAS_NAMESPACE juce
-    "${DRIZEL_JUCE_PATH}/modules/juce_core"
-    "${DRIZEL_JUCE_PATH}/modules/juce_audio_basics"
-    "${DRIZEL_JUCE_PATH}/modules/juce_audio_formats"
-)
+# Opt in to plugin builds; default offline configuration remains lightweight.
+option(DRIZEL_BUILD_PLUGIN "Build VST3 and Standalone (plus AU on macOS)" OFF)
+if(DRIZEL_BUILD_PLUGIN)
+    add_subdirectory("${DRIZEL_JUCE_PATH}" "${CMAKE_BINARY_DIR}/JUCE" EXCLUDE_FROM_ALL)
+else()
+    include("${DRIZEL_JUCE_PATH}/extras/Build/CMake/JUCEModuleSupport.cmake")
+    juce_add_modules(ALIAS_NAMESPACE juce
+        "${DRIZEL_JUCE_PATH}/modules/juce_core"
+        "${DRIZEL_JUCE_PATH}/modules/juce_audio_basics"
+        "${DRIZEL_JUCE_PATH}/modules/juce_audio_formats")
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF) # Request standard C++ mode instead of GNU extensions.
 
@@ -147,4 +147,31 @@ if(BUILD_TESTING)
     # Missing arguments must produce a nonzero exit code.
     add_test(NAME grain_cloud_usage COMMAND drizel_grain_cloud)
     set_tests_properties(grain_cloud_usage PROPERTIES WILL_FAIL TRUE)
+endif()
+
+if(BUILD_TESTING)
+    find_package(Threads REQUIRED)
+    add_executable(drizel_realtime_tests tests/RealtimeEngineTests.cpp)
+    target_link_libraries(drizel_realtime_tests PRIVATE drizel_core Threads::Threads)
+    target_compile_options(drizel_realtime_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME realtime_engine COMMAND drizel_realtime_tests)
+endif()
+
+if(DRIZEL_BUILD_PLUGIN)
+    set(DRIZEL_FORMATS VST3 Standalone)
+    if(APPLE)
+        list(APPEND DRIZEL_FORMATS AU)
+    endif()
+    juce_add_plugin(DrizelPlugin
+        COMPANY_NAME "Neural Manacle"
+        BUNDLE_ID "com.neuralmanacle.drizel"
+        PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
+        FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
+        IS_SYNTH TRUE NEEDS_MIDI_INPUT FALSE NEEDS_MIDI_OUTPUT FALSE
+        COPY_PLUGIN_AFTER_BUILD FALSE)
+    juce_generate_juce_header(DrizelPlugin)
+    target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
+    target_link_libraries(DrizelPlugin PRIVATE drizel_core juce::juce_audio_utils)
+    target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0)
 endif()

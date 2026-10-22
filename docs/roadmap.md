@@ -175,15 +175,20 @@ spectral experiments remain open; Layer 2 is not complete.
 
 ## Layer 5: Real-time engine
 
+> Step 6 implements the live callback, asynchronous loading, sample handoff,
+> smoothed controls and output safety. See [real-time engine](realtime-engine.md).
+> Host/device listening and worst-case callback timing remain open; the exit
+> criteria below are not yet claimed complete.
+
 **Goal:** The same engine running live inside an audio callback.
 
-- [ ] Wrap the engine in a JUCE audio processor (`prepareToPlay`, `processBlock`)
-- [ ] Handle arbitrary block sizes and sample rates
-- [ ] Audit `processBlock` for allocation, locks, and blocking calls
-- [ ] Load samples on a background thread and hand them to the audio thread safely
-- [ ] Expose engine parameters through thread-safe, smoothed values (atomics plus per-block or per-sample smoothing)
-- [ ] Add playback position control and pitch modulation as live parameters
-- [ ] Add denormal protection and output limiting or clipping safety
+- [x] Wrap the engine in a JUCE audio processor (`prepareToPlay`, `processBlock`)
+- [x] Handle arbitrary block sizes and sample rates
+- [x] Audit `processBlock` for allocation, locks, and blocking calls
+- [x] Load samples on a background thread and hand them to the audio thread safely
+- [x] Expose engine parameters through thread-safe, smoothed values (atomics plus per-block or per-sample smoothing)
+- [x] Add playback position control and pitch modulation as live parameters
+- [x] Add denormal protection and output limiting or clipping safety
 
 **Validation**
 - [ ] Run for an extended session with no dropouts at typical buffer sizes (64-512 samples)
