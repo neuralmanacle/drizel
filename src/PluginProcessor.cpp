@@ -10,6 +10,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"density", 1}, "Density (grains/sec)", 1.0f, 100.0f, 20.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"gain", 1}, "Output gain", 0.0f, 1.0f, 0.8f));
     layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID{"play", 1}, "Play", true));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"lfoRate", 1}, "LFO rate (Hz)", 0.05f, 10.0f, 0.5f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"lfoDepth", 1}, "LFO depth", 0.0f, 1.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoShape", 1}, "LFO shape", juce::StringArray{"Sine", "Triangle"}, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoDestination", 1}, "LFO destination", juce::StringArray{"Off", "Position", "Pitch"}, 0));
     return layout; // Construction and allocations occur before playback.
 }
 
@@ -23,6 +27,10 @@ DrizelAudioProcessor::DrizelAudioProcessor()
     density = parameters.getRawParameterValue("density");
     gain = parameters.getRawParameterValue("gain");
     play = parameters.getRawParameterValue("play");
+    lfoRate = parameters.getRawParameterValue("lfoRate");
+    lfoDepth = parameters.getRawParameterValue("lfoDepth");
+    lfoShape = parameters.getRawParameterValue("lfoShape");
+    lfoDestination = parameters.getRawParameterValue("lfoDestination");
     startThread(); // No thread creation is deferred into the callback.
 }
 DrizelAudioProcessor::~DrizelAudioProcessor()
@@ -33,7 +41,8 @@ DrizelAudioProcessor::~DrizelAudioProcessor()
 }
 void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
 {
-    engine.prepare(sampleRate); // The host guarantees processing is stopped here.
+    engine.prepare(sampleRate);
+    lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
     requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
     ++revision;
@@ -54,11 +63,18 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         return;
     const auto pos = position->load(), semitones = pitch->load(); // One atomic snapshot per block.
     const auto grains = density->load(), level = gain->load() * play->load();
+    lfo.setRate(lfoRate->load());
+    lfo.setShape(lfoShape->load() >= 0.5f ? drizel::LfoShape::triangle : drizel::LfoShape::sine);
+    const int destination = static_cast<int>(lfoDestination->load());
+    modulation.set(destination == 1 ? drizel::ModDestination::position
+                   : destination == 2 ? drizel::ModDestination::pitch
+                                      : drizel::ModDestination::off, lfoDepth->load());
     auto* left = buffer.getWritePointer(0); // Borrow only for this callback.
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
     for (int i = 0; i < buffer.getNumSamples(); ++i) // No assumed maximum block size.
     {
-        const auto frame = engine.next(pos, semitones, grains, level);
+        const auto targets = modulation.apply(pos, semitones, lfo.next());
+        const auto frame = engine.next(targets.position, targets.pitch, grains, level);
         left[i] = right != nullptr ? frame.left : 0.5f * (frame.left + frame.right);
         if (right != nullptr)
             right[i] = frame.right;
