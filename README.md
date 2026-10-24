@@ -225,6 +225,16 @@ version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
 
+## Step 7: first modulation source
+
+A deterministic sine/triangle LFO now modulates grain position or pitch through
+new host parameters (rate, depth, shape and destination). Existing smoothing
+remains in the real-time engine. This is the first part of roadmap Layer 6;
+envelopes, random walk and more destinations remain planned.
+
+See [Step 7 modulation notes](docs/step-7-modulation.md). Run the added
+`modulation` CTest test alongside the existing suite.
+
 ## Step 6: live grain cloud
 
 The plugin now loads WAV files on a background thread and renders the grain

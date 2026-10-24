@@ -157,6 +157,13 @@ if(BUILD_TESTING)
     add_test(NAME realtime_engine COMMAND drizel_realtime_tests)
 endif()
 
+if(BUILD_TESTING)
+    add_executable(drizel_modulation_tests tests/ModulationTests.cpp)
+    target_link_libraries(drizel_modulation_tests PRIVATE drizel_core)
+    target_compile_options(drizel_modulation_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME modulation COMMAND drizel_modulation_tests)
+endif()
+
 if(DRIZEL_BUILD_PLUGIN)
     set(DRIZEL_FORMATS VST3 Standalone)
     if(APPLE)
