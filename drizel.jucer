@@ -26,6 +26,7 @@
         <FILE id="Rt0" name="Grain.h" compile="0" resrc="0" file="src/audio/Grain.h" />
         <FILE id="Rt1" name="GrainCloud.h" compile="0" resrc="0" file="src/audio/GrainCloud.h" />
         <FILE id="Rt2" name="RealtimeEngine.h" compile="0" resrc="0" file="src/audio/RealtimeEngine.h" />
+        <FILE id="DrzMod7" name="Modulation.h" compile="0" resrc="0" file="src/audio/Modulation.h" />
 
         <FILE id="DrzWin" name="Window.h" compile="0" resrc="0" file="src/audio/Window.h" />
         <FILE id="DrzInt" name="Interpolation.h" compile="0" resrc="0" file="src/audio/Interpolation.h" />
@@ -43,10 +44,12 @@
       </GROUP>
     </GROUP>
     <GROUP id="D152af" name="tests">
+      <FILE id="DrzMT7" name="ModulationTests.cpp" compile="0" resrc="0" file="tests/ModulationTests.cpp" />
       <FILE id="DrzSig" name="SignalPrimitiveTests.cpp" compile="0" resrc="0" file="tests/SignalPrimitiveTests.cpp" />
       <FILE id="D32d9a" name="AudioDataTests.cpp" compile="0" resrc="0" file="tests/AudioDataTests.cpp" />
     </GROUP>
     <GROUP id="D5a860" name="docs">
+      <FILE id="DrzD7" name="step-7-modulation.md" compile="0" resrc="0" file="docs/step-7-modulation.md" />
       <FILE id="DrzNot" name="signal-primitives.md" compile="0" resrc="0" file="docs/signal-primitives.md" />
       <FILE id="Db19cf" name="architecture.md" compile="0" resrc="0" file="docs/architecture.md" />
       <GROUP id="Dbd2d6" name="assets">
