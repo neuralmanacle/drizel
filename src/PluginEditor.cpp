@@ -17,7 +17,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                     safe->processor.requestSample(dialog.getResult());
             }); // SafePointer prevents access after the editor closes.
     };
-    setSize(520, 350);
+    setSize(520, 520);
     startTimerHz(5); // UI status never reads or locks the audio engine.
     timerCallback();
 }
