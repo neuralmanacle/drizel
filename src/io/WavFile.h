@@ -8,7 +8,7 @@
  * need a filesystem path and SampleBuffer; they do not manage codec streams.
  */
 
-#include "audio/SampleBuffer.h"
+#include "../src/audio/SampleBuffer.h"
 
 #include <cstddef>
 #include <filesystem>
