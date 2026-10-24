@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "audio/RealtimeEngine.h"
+#include "audio/Modulation.h"
 
 // Host-facing wrapper. Audio owns the engine; the loader owns all disk I/O.
 class DrizelAudioProcessor : public juce::AudioProcessor, private juce::Thread
@@ -34,6 +35,8 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeParameters();
     void run() override; // Loader loop, including packet reclamation.
+    drizel::Lfo lfo;
+    drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
     juce::CriticalSection requestLock; // Only UI/lifecycle/state/worker use this.
     juce::String requestedPath, status = "Load a WAV to begin";
@@ -44,5 +47,9 @@ private:
     std::atomic<float>* density = nullptr;
     std::atomic<float>* gain = nullptr;
     std::atomic<float>* play = nullptr;
+    std::atomic<float>* lfoRate = nullptr;
+    std::atomic<float>* lfoDepth = nullptr;
+    std::atomic<float>* lfoShape = nullptr;
+    std::atomic<float>* lfoDestination = nullptr;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrizelAudioProcessor)
 };
