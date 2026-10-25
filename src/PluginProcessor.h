@@ -29,6 +29,10 @@ public:
     void setStateInformation(const void*, int) override;
 
     void requestSample(const juce::File&); // Control thread only; queues a path.
+    struct SampleDisplayState { juce::String path; std::uint64_t revision; };
+    SampleDisplayState loadedSampleState(); // Message-thread snapshot under loader lock.
+    float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
+    int activeGrainCount() const noexcept { return grainsActive.load(std::memory_order_relaxed); }
     juce::String loadStatus(); // UI thread only; never queried by processBlock.
     juce::AudioProcessorValueTreeState parameters; // Automatable controls/state.
 
@@ -39,6 +43,10 @@ private:
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
     juce::CriticalSection requestLock; // Only UI/lifecycle/state/worker use this.
+    std::atomic<float> peak {0.0f};
+    std::atomic<int> grainsActive {0};
+    juce::String readyPath;
+    std::uint64_t readyRevision = 0;
     juce::String requestedPath, status = "Load a WAV to begin";
     double requestedRate = 0.0; // Zero until the host prepares playback.
     std::uint64_t revision = 0; // Changed path/rate invalidates in-flight work.

@@ -93,6 +93,11 @@ public:
         return {safe(frame.left), safe(frame.right)};
     }
 
+    std::size_t activeGrains() const noexcept
+    {
+        return active_ != nullptr ? active_->cloud.activeCount() : 0;
+    }
+
 private:
     void smooth(double& value, double target, double low, double high) noexcept
     {

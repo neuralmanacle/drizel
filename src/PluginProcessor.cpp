@@ -22,6 +22,7 @@ DrizelAudioProcessor::DrizelAudioProcessor()
       Thread("Drizel sample loader"), parameters(*this, nullptr, "DrizelState", makeParameters())
 {
     static_assert(std::atomic<float>::is_always_lock_free, "Parameters must be lock-free");
+    static_assert(std::atomic<int>::is_always_lock_free, "Telemetry must be lock-free");
     position = parameters.getRawParameterValue("position");
     pitch = parameters.getRawParameterValue("pitch");
     density = parameters.getRawParameterValue("density");
@@ -60,7 +61,11 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     buffer.clear(); // Also initialise any unexpected extra channels.
     midi.clear(); // This free-running texture does not produce MIDI.
     if (buffer.getNumChannels() == 0)
+    {
+        peak.store(0.0f, std::memory_order_relaxed);
+        grainsActive.store(0, std::memory_order_relaxed);
         return;
+    }
     const auto pos = position->load(), semitones = pitch->load(); // One atomic snapshot per block.
     const auto grains = density->load(), level = gain->load() * play->load();
     lfo.setRate(lfoRate->load());
@@ -71,6 +76,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                                       : drizel::ModDestination::off, lfoDepth->load());
     auto* left = buffer.getWritePointer(0); // Borrow only for this callback.
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
+    float blockPeak = 0.0f;
     for (int i = 0; i < buffer.getNumSamples(); ++i) // No assumed maximum block size.
     {
         const auto targets = modulation.apply(pos, semitones, lfo.next());
@@ -78,7 +84,12 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         left[i] = right != nullptr ? frame.left : 0.5f * (frame.left + frame.right);
         if (right != nullptr)
             right[i] = frame.right;
+        blockPeak = std::max(blockPeak, std::abs(left[i]));
+        if (right != nullptr)
+            blockPeak = std::max(blockPeak, std::abs(right[i]));
     }
+    peak.store(blockPeak, std::memory_order_relaxed);
+    grainsActive.store(static_cast<int>(engine.activeGrains()), std::memory_order_relaxed);
 }
 void DrizelAudioProcessor::requestSample(const juce::File& file)
 {
@@ -87,6 +98,11 @@ void DrizelAudioProcessor::requestSample(const juce::File& file)
     status = "Loading " + file.getFileName();
     ++revision; // Newest request wins if a previous decode is still running.
     notify();
+}
+DrizelAudioProcessor::SampleDisplayState DrizelAudioProcessor::loadedSampleState()
+{
+    const juce::ScopedLock lock(requestLock);
+    return {readyPath, readyRevision};
 }
 juce::String DrizelAudioProcessor::loadStatus()
 {
@@ -119,6 +135,8 @@ void DrizelAudioProcessor::run()
                 const juce::ScopedLock lock(requestLock);
                 if (job == revision && !threadShouldExit())
                 {
+                    readyRevision = job;
+                    readyPath = path; // UI waveform follows successful decoding only.
                     engine.publish(std::move(ready)); // Atomic ownership transfer.
                     status = path.isEmpty() ? "Load a WAV to begin"
                                             : "Ready: " + juce::File(path).getFileName();

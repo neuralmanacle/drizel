@@ -47,7 +47,9 @@ drizel::GrainFrame tick(drizel::RealtimeEngine& engine, double position = 0.0,
 {
     audioThread = true;
     auto frame = engine.next(position, pitch, density, gain);
+    const auto count = engine.activeGrains();
     audioThread = false;
+    check(count <= 64, "activity telemetry stays within voice capacity");
     check(std::isfinite(frame.left) && std::isfinite(frame.right)
         && std::abs(frame.left) <= 1.0f && std::abs(frame.right) <= 1.0f, "finite bounded output");
     return frame;
@@ -59,6 +61,7 @@ int main()
         drizel::RealtimeEngine a, b;
         a.prepare(rate); b.prepare(rate);
         check(tick(a).left == 0.0f, "unloaded silence");
+        check(a.activeGrains() == 0, "unloaded activity is zero");
         // Reset both so the smoother histories match.
         a.prepare(rate);
         a.publish(packet(rate)); b.publish(packet(rate));
@@ -72,6 +75,7 @@ int main()
                 peak = std::max(peak, std::abs(x.left));
             }
         check(peak > 0.001f, "loaded engine produces audio");
+        check(a.activeGrains() > 0, "playing source reports active grains");
         for (int i = 0; i < 50000; ++i) tick(a, 0.0, 24.0, 1.0, 0.0);
         check(std::abs(tick(a, 0.0, 24.0, 1.0, 0.0).left) < 1.0e-5f, "smoothed mute");
         a.collect();
@@ -85,6 +89,7 @@ int main()
         }
         a.collect();
         a.prepare(rate); // Device restart clears old playback outside callback.
+        check(a.activeGrains() == 0, "restart clears activity");
         a.publish(packet(rate == 48000 ? 44100 : 48000));
         for (int i = 0; i < 1000; ++i) check(tick(a).left == 0.0f, "reject old-rate packet");
         a.collect();

@@ -246,3 +246,10 @@ for Projucer/CMake builds, ownership details and remaining listening/host checks
 cmake -S . -B build-plugin -DDRIZEL_JUCE_PATH=../JUCE -DDRIZEL_BUILD_PLUGIN=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build-plugin --parallel 2
 ```
+
+## Layer 8: instrument interface (first increment)
+
+The editor now has dedicated parameter controls, a sample waveform with a base
+position marker, active-grain count, WAV drag-and-drop and an output bar.
+See [the interface guide](docs/step-8-interface.md) for semantics and outstanding
+plugin/host/packaging validation. This does not complete Layer 8.

@@ -49,6 +49,8 @@
       <FILE id="D32d9a" name="AudioDataTests.cpp" compile="0" resrc="0" file="tests/AudioDataTests.cpp" />
     </GROUP>
     <GROUP id="D5a860" name="docs">
+      <FILE id="DrzLog8" name="2026-10-25-layer-8-interface.md" compile="0" resrc="0" file="docs/devlog/2026-10-25-layer-8-interface.md" />
+      <FILE id="DrzUI8" name="step-8-interface.md" compile="0" resrc="0" file="docs/step-8-interface.md" />
       <FILE id="DrzD7" name="step-7-modulation.md" compile="0" resrc="0" file="docs/step-7-modulation.md" />
       <FILE id="DrzNot" name="signal-primitives.md" compile="0" resrc="0" file="docs/signal-primitives.md" />
       <FILE id="Db19cf" name="architecture.md" compile="0" resrc="0" file="docs/architecture.md" />

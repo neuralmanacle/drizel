@@ -245,6 +245,11 @@ spectral experiments remain open; Layer 2 is not complete.
 
 ## Layer 8: Interface and packaging
 
+> First interface increment: dedicated host-bound controls, waveform/base-position
+> marker, active-grain telemetry, WAV drag-and-drop and output display. See
+> [interface guide](step-8-interface.md). Plugin build and manual acceptance
+> remain unverified; this layer is not complete.
+
 **Goal:** A usable, shippable instrument.
 
 **Interface**
