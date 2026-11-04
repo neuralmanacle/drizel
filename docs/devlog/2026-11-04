@@ -1,0 +1,45 @@
+# Drizel — Step 8: Giving the Grain Cloud an Interface
+
+Replaced the generic test panel with a dedicated instrument interface.
+
+## What Changed
+
+- Controls for position, pitch, density, output gain, and LFO settings.
+- Play toggle and WAV drag-and-drop.
+- Sample waveform with a base-position marker.
+- Active-grain count and output-level meter.
+
+## How It Works
+
+The processor publishes output peak and active-grain count through
+lock-free atomics. The interface reads these independently without
+making the audio callback wait.
+
+Sample loading runs on a background thread. A file path and revision
+tell the interface when to refresh the waveform, including when the
+same file is reloaded. A separate lock protects this pair outside
+the audio callback.
+
+The existing LFO processing remains unchanged. This step makes the
+engine easier to control and observe.
+
+## Files Changed
+
+- `src/PluginEditor.cpp`
+- `src/PluginEditor.h`
+- `src/PluginProcessor.cpp`
+- `src/PluginProcessor.h`
+- `src/audio/RealtimeEngine.h`
+- `tests/RealtimeEngineTests.cpp`
+
+## Validation
+
+All 9 offline tests passed, including new grain-count checks.
+
+A full plugin build, target-Mac listening tests, and host validation
+remain pending.
+
+## Next
+
+Verify the interface and saved-state behavior in actual hosts,
+measure callback timing, and work toward packaging.
