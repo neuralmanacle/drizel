@@ -225,31 +225,3 @@ version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
 
-## Step 7: first modulation source
-
-A deterministic sine/triangle LFO now modulates grain position or pitch through
-new host parameters (rate, depth, shape and destination). Existing smoothing
-remains in the real-time engine. This is the first part of roadmap Layer 6;
-envelopes, random walk and more destinations remain planned.
-
-See [Step 7 modulation notes](docs/step-7-modulation.md). Run the added
-`modulation` CTest test alongside the existing suite.
-
-## Step 6: live grain cloud
-
-The plugin now loads WAV files on a background thread and renders the grain
-cloud live, with smoothed position, pitch, density, gain and Play controls.
-Sample swaps fade through silence. See [the Step 6 guide](docs/realtime-engine.md)
-for Projucer/CMake builds, ownership details and remaining listening/host checks.
-
-```sh
-cmake -S . -B build-plugin -DDRIZEL_JUCE_PATH=../JUCE -DDRIZEL_BUILD_PLUGIN=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build-plugin --parallel 2
-```
-
-## Layer 8: instrument interface (first increment)
-
-The editor now has dedicated parameter controls, a sample waveform with a base
-position marker, active-grain count, WAV drag-and-drop and an output bar.
-See [the interface guide](docs/step-8-interface.md) for semantics and outstanding
-plugin/host/packaging validation. This does not complete Layer 8.
