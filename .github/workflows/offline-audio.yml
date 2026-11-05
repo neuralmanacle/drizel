@@ -37,3 +37,21 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Test # Report captured executable output if a test fails.
         run: ctest --test-dir build --output-on-failure
+      - name: Collect development build notes
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p build/development-notices
+          cp LICENSE build/development-notices/DRIZEL-LICENSE
+          cp build-deps/JUCE/LICENSE.md build/development-notices/JUCE-LICENSE.md
+          cp docs/step-9-instrument.md build/development-notices/
+          git rev-parse HEAD > build/development-notices/SOURCE-COMMIT.txt
+      - name: Upload unsigned development builds
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: drizel-macos-debug-${{ github.sha }}
+          path: |
+            build/DrizelPlugin_artefacts/Debug/
+            build/development-notices/
+          if-no-files-found: error
+          retention-days: 14

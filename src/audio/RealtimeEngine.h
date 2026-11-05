@@ -82,7 +82,7 @@ public:
             }
         }
         smooth(position_, position, 0.0, 1.0); // Normalised source start position.
-        smooth(pitch_, pitch, -24.0, 24.0); // Pitch in semitones.
+        smooth(pitch_, pitch, -153.0, 153.0); // Pitch in semitones.
         smooth(density_, density, 1.0, 100.0); // Grains per second.
         smooth(gain_, gain, 0.0, 1.0); // Play/mute also passes through smoothing.
         if (active_ == nullptr)

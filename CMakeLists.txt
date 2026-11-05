@@ -174,11 +174,29 @@ if(DRIZEL_BUILD_PLUGIN)
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
-        IS_SYNTH TRUE NEEDS_MIDI_INPUT FALSE NEEDS_MIDI_OUTPUT FALSE
+        IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
         COPY_PLUGIN_AFTER_BUILD FALSE)
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
     target_link_libraries(DrizelPlugin PRIVATE drizel_core juce::juce_audio_utils)
     target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(drizel_midi_tests tests/MidiInstrumentTests.cpp)
+    target_link_libraries(drizel_midi_tests PRIVATE drizel_core)
+    target_compile_options(drizel_midi_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME midi_instrument COMMAND drizel_midi_tests)
+endif()
+
+if(BUILD_TESTING AND DRIZEL_BUILD_PLUGIN)
+    add_executable(drizel_processor_tests tests/PluginProcessorTests.cpp)
+    target_link_libraries(drizel_processor_tests PRIVATE DrizelPlugin)
+    target_include_directories(drizel_processor_tests PRIVATE
+        $<TARGET_PROPERTY:DrizelPlugin,INCLUDE_DIRECTORIES>)
+    target_compile_definitions(drizel_processor_tests PRIVATE
+        $<TARGET_PROPERTY:DrizelPlugin,COMPILE_DEFINITIONS>)
+    target_compile_features(drizel_processor_tests PRIVATE cxx_std_17)
+    add_test(NAME plugin_processor COMMAND drizel_processor_tests)
 endif()

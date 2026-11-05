@@ -2,17 +2,18 @@
 
 This roadmap builds Drizel from the bottom up. Each layer depends only on the layers beneath it, and each ends with a concrete, testable result before the next begins. Nothing in a higher layer is started until the exit criteria of the layer below are met.
 
-> **Status — 10 October 2026:** The first offline WAV milestone is reached:
-> the maintainer reported passing CMake/CTest checks on macOS and an exact
-> decoded-sample round trip of a real stereo file. The starter plugin also runs;
-> its editor still shows "Hello World!". Listening and large-file stress checks
-> remain open. See the [development log](devlog/2026-10-10.md) and
-> [audio-data design](audio-data.md). Promptable modulation is a documented
-> research direction, with implementation still planned.
+> **Status — 5 November 2026:** Step 9 combines Layer 7 MIDI instrument
+> behaviour with Layer 8 interface/preset and packaging work. See the
+> [Step 9 guide](step-9-instrument.md) for the implementation and acceptance
+> checklist. The first offline WAV milestone remains recorded in the
+> [10 October log](devlog/2026-10-10.md). Host listening, primary-platform
+> acceptance and distribution checks remain open; promptable modulation is
+> still a research direction.
 
 ## How to read this roadmap
 
 - **Layers** are ordered by dependency, not by difficulty or visibility. The user interface sits near the top because it needs everything beneath it.
+- **Checkboxes** record verified implementation or completed validation, not release readiness. Study items require learner confirmation. Partly completed items are split so automated checks do not imply listening or host acceptance.
 - **Exit criteria** define "done" for each layer. If they cannot be checked, the layer is not finished.
 - **Experiments** (`experiments/`) come before production code (`src/`). Prototype an idea, record what was learned, then implement it properly.
 - **Mapping to the README:** Layers 0-3 correspond to *Core DSP*, Layers 4-5 to *Real-time engine*, Layers 6-8 to *Instrument and interface*, and Layer 9 to *AI-assisted modulation*.
@@ -41,7 +42,8 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 - [x] Repository layout in place (`src/`, `tests/`, `experiments/`, `learnings/`, `docs/`)
 - [x] JUCE and Projucer starter project builds and opens on the target machine (maintainer report; no audio engine yet)
 - [x] A test runner is chosen and automated tests pass (C++ executable registered with CTest)
-- [ ] Continuous formatting and warning settings agreed (warnings as errors where practical)
+- [x] Strict compiler warnings and warnings-as-errors configured for core tests and the WAV adapter
+- [ ] Continuous formatting policy and automated formatting checks agreed
 
 **Exit criteria**
 - A clean checkout builds from the README steps with no manual fixes.
@@ -92,13 +94,14 @@ remains tracked here; this does not claim a finished sample-loading UI or engine
 
 ### 2.2 Interpolation
 - [x] Linear interpolation at fractional read positions
-- [ ] Higher-order interpolation (for example cubic Hermite) behind the same interface
+- [x] Cubic Hermite interpolation behind the same `readSample` interface, with numerical and boundary tests
 - [x] Zero-padded source boundaries, including fractional blends with silence
 
 ### 2.3 Utilities
-- [ ] Semitone/cents to playback-rate conversion
+- [x] Fractional-semitone to playback-rate conversion in `GrainCloud` (`2^(semitones/12)` plus sample-rate ratio)
+- [ ] Extract reusable pitch helpers, including an explicit cents interface
 - [ ] Gain and decibel helpers
-- [ ] A simple deterministic random source for reproducible tests
+- [x] Seeded deterministic random source in `GrainCloud`, checked by reproducible-render tests
 
 **Experiments**
 - [ ] Render a sine wave at fractional rates with each interpolator and compare spectra to hear and see aliasing and high-frequency loss
@@ -108,9 +111,10 @@ remains tracked here; this does not claim a finished sample-loading UI or engine
 - [x] Hann: correct length, endpoints, symmetry, expected overlap-sum behaviour
 - [x] Linear interpolation: exact at integer positions, correct at midpoints, safe at boundaries
 
-The first increment is documented in [signal primitives](signal-primitives.md).
-Alternative windows, higher-order interpolation, utilities, and the listening/
-spectral experiments remain open; Layer 2 is not complete.
+Hann, linear and Hermite primitives are documented in [signal primitives](signal-primitives.md).
+Pitch conversion and seeded randomness are implemented in the cloud. Alternative
+windows, remaining standalone utility helpers, and listening/spectral experiments
+remain open; Layer 2 is not complete.
 
 **Exit criteria**
 - Each primitive has tests and a short note in `docs/` on its trade-offs.
@@ -120,22 +124,26 @@ spectral experiments remain open; Layer 2 is not complete.
 
 ## Layer 3: A single grain
 
+> Implementation and numerical checks are complete; see [single grain](single-grain.md)
+> and the [Step 4 verification log](devlog/2026-10-16-step-4-single-grain.md).
+> Target-machine listening remains open.
+
 **Goal:** One grain, played correctly, offline.
 
-- [ ] Define grain state: start position, current position, playback rate, length, window, amplitude, active flag
-- [ ] Render one windowed grain from the sample buffer into an output buffer
-- [ ] Support variable playback rate (pitch) via interpolation
-- [ ] Handle grains that run past the end of the buffer
-- [ ] Add per-grain pan and gain
-- [ ] Ensure a grain can be reset and reused without allocation
+- [x] Define grain state: start position, current position, playback rate, length, window, amplitude, active flag
+- [x] Render one windowed grain from the sample buffer into an output buffer
+- [x] Support variable playback rate (pitch) via interpolation
+- [x] Handle grains that run past the end of the buffer
+- [x] Add per-grain pan and gain
+- [x] Ensure a grain can be reset and reused without allocation
 
 **Experiments**
 - [ ] Render the same grain at several lengths and rates to a file and listen for clicks and artefacts
 
 **Tests**
-- [ ] Grain produces exactly its configured length of non-zero output
-- [ ] Output starts and ends at zero with the chosen window
-- [ ] Rate of 1.0 reproduces the source slice (within window shaping)
+- [x] Grain stays active for exactly its configured frame count, including silent Hann endpoints and zero-padded reads
+- [x] Output starts and ends at zero with the chosen window
+- [x] Rate of 1.0 reproduces the source slice (within window shaping)
 
 **Exit criteria**
 - A single grain renders to a WAV that sounds clean at multiple pitches.
@@ -159,7 +167,8 @@ spectral experiments remain open; Layer 2 is not complete.
 - [x] Gain compensation so output level stays sensible as overlap changes
 
 **Experiments**
-- [ ] Render textures from the same sample at low, medium, and high density
+- [x] Render generated-source textures at 5, 20, 80 and 1000 grains/sec; finite/bounded output recorded in the [Step 5 log](devlog/2026-10-19-step-5-grain-cloud.md)
+- [ ] Listen to low-, medium- and high-density textures on the target machine
 - [ ] Measure CPU cost per grain offline to estimate a safe maximum
 
 **Tests**
@@ -194,7 +203,8 @@ spectral experiments remain open; Layer 2 is not complete.
 - [ ] Run for an extended session with no dropouts at typical buffer sizes (64-512 samples)
 - [ ] Stress test at maximum grain density and small buffer sizes
 - [ ] Verify the parameter-smoothing path produces no zipper noise
-- [ ] Confirm behaviour when the sample is swapped during playback
+- [x] Automated sample-swap continuity, stale-rate rejection and concurrent handoff checks
+- [ ] Confirm sample-swap behaviour by listening during host playback
 
 **Exit criteria**
 - Drizel plays a loaded sample live with adjustable position, pitch, and density, and no audible glitches.
@@ -206,36 +216,48 @@ spectral experiments remain open; Layer 2 is not complete.
 
 **Goal:** A single, general way to move parameters over time, so later features plug in rather than special-case.
 
-- [ ] Define a modulation source interface that outputs a value per block or per sample
-- [ ] LFO source (shape, rate, depth)
-- [ ] Envelope source
+- [x] Per-sample bipolar LFO output and scalar-source router input
+- [ ] General interchangeable source interface for LFO, envelope and random walk
+- [x] LFO source (sine/triangle shape, rate, depth)
+- [x] MIDI velocity attack/release amplitude envelope (Step 9 final-output gate)
+- [ ] Routable envelope source for arbitrary modulation destinations
 - [ ] Random-walk source for slow organic drift
-- [ ] Modulation routing: source, destination, amount
-- [ ] All modulated parameters pass through the same smoothing path
+- [x] Single LFO route with Off/Position/Pitch destination and amount
+- [ ] General multi-source routing, including density and spread destinations
+- [x] Current LFO position/pitch targets and MIDI pitch/position/density controls use the engine smoothing path (note amplitude has its own envelope)
 
 **Tests**
-- [ ] Sources produce expected ranges and rates
-- [ ] Routing with zero amount leaves a parameter unchanged
+- [x] Current LFO range/rate and MIDI envelope/controller behaviour tested
+- [ ] Range/rate tests for future general envelope and random-walk sources
+- [x] Routing with zero amount leaves a parameter unchanged
 
 **Exit criteria**
 - Position, pitch, density, and spread can each be driven by any source.
 - Adding a new source requires no changes to the engine.
 
+> Layer 6 remains partial: a general source interface, routable envelopes, random
+> walk and density/spread modulation routes are still open. Step 9 uses the existing
+> LFO route and a dedicated MIDI amplitude envelope; it does not complete Layer 6.
+>
 > This layer is the attachment point for MIDI (Layer 7) and for local execution of prompt-derived policies (Layer 9).
 
 ---
 
 ## Layer 7: Instrument behaviour (MIDI)
 
+> Step 9 combines Layers 7 and 8: see [instrument guide](step-9-instrument.md).
+> MIDI and preset implementation is present; target-host listening, reproducible
+> sound recall and distribution acceptance remain open.
+
 **Goal:** Make the engine playable as an instrument.
 
-- [ ] MIDI note input mapped to pitch
-- [ ] Note on/off with an amplitude envelope
-- [ ] Decide the voicing model: one shared grain cloud, or a cloud per note
-- [ ] MIDI CC mapping to parameters
-- [ ] Pitch bend and mod wheel
-- [ ] Sample-accurate MIDI event timing within a block
-- [ ] Presets: save and recall parameter sets
+- [x] MIDI note input mapped to pitch
+- [x] Note on/off with an amplitude envelope
+- [x] Decide the voicing model: one shared grain cloud, or a cloud per note
+- [x] MIDI CC mapping to parameters
+- [x] Pitch bend and mod wheel
+- [x] Sample-accurate MIDI event timing within a block
+- [x] Presets: save and recall parameter sets
 
 **Exit criteria**
 - A MIDI keyboard plays the instrument with correct pitch and clean note starts and releases.
@@ -245,26 +267,30 @@ spectral experiments remain open; Layer 2 is not complete.
 
 ## Layer 8: Interface and packaging
 
-> First interface increment: dedicated host-bound controls, waveform/base-position
-> marker, active-grain telemetry, WAV drag-and-drop and output display. See
-> [interface guide](step-8-interface.md). Plugin build and manual acceptance
-> remain unverified; this layer is not complete.
+> Step 8 introduced host-bound controls, waveform/base-position marker,
+> active-grain telemetry, WAV drag-and-drop and output display. Step 9 extends
+> this with MIDI/envelope/root controls and preset dialogs. See the
+> [Step 9 guide](step-9-instrument.md). Primary-platform and host acceptance
+> remain open; this layer is not complete.
 
 **Goal:** A usable, shippable instrument.
 
 **Interface**
-- [ ] Parameter controls bound to engine parameters
-- [ ] Waveform display with a position marker and grain activity
-- [ ] Sample loading by file chooser and drag-and-drop
-- [ ] Modulation assignment and amount controls
-- [ ] Output meter
-- [ ] Interface updates never block or allocate on the audio thread
+- [x] Parameter controls bound to engine parameters
+- [x] Waveform display with a position marker and grain activity
+- [x] Sample loading by file chooser and drag-and-drop
+- [x] Modulation assignment and amount controls
+- [x] Output meter
+- [x] Interface updates never block or allocate on the audio thread
 
 **Packaging and testing**
 - [ ] Standalone build on the primary platform
-- [ ] Audio plugin build (VST3 and/or AU, as chosen)
+- [x] Linux Standalone and VST3 Debug builds compiled with JUCE 8.0.15
+- [ ] Primary-Mac VST3/AU builds verified for Step 9
+- [x] CI configured to build macOS formats, run tests and upload unsigned development artifacts (run result tracked separately)
 - [ ] Test in at least two plugin hosts
-- [ ] State save and restore inside a host session
+- [x] Processor integration tests for preset/host-state recall, invalid preset rejection and held-note reset
+- [ ] State save and restore inside a real host session
 - [ ] Verify AGPL-3.0 and third-party (including JUCE) license obligations for distribution
 
 **Exit criteria**

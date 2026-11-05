@@ -10,11 +10,11 @@ An experimental part of the vision is **promptable modulation**: describe how
 the sound should move, then let a model translate that intention into an editable
 modulation policy. Grain scanning is the first proposed use case.
 
-> **Status — 22 October 2026:** Step 6 connects the grain cloud to live JUCE
-> playback with background WAV loading and smoothed controls. Automated core
-> tests pass; target-machine listening and worst-case callback timing remain
-> open. MIDI and promptable modulation are still planned. See the
-> [Step 6 implementation guide](docs/realtime-engine.md).
+> **Status — 5 November 2026:** Step 9 combines MIDI instrument behaviour
+> (Layer 7) with interface/preset and packaging work (Layer 8). One shared cloud
+> supports last-note priority, velocity envelopes, bend and CC control; Drone
+> mode preserves continuous textures. See the [Step 9 guide](docs/step-9-instrument.md)
+> for building, playing and the outstanding host/release acceptance checks.
 
 ## About
 
@@ -74,14 +74,18 @@ scope, example interpretations, execution design, and experiments still needed.
 ### 2. Real-time engine
 
 - [x] Integrate the engine with real-time audio processing
-- [x] Add live playback position and pitch controls (modulation sources come later)
-- [ ] Validate processing behaviour and performance
+- [x] Add live position/pitch controls and sine/triangle LFO modulation
+- [x] Automated core and processor behaviour checks (11 CTest entries in the plugin-enabled build)
+- [ ] Validate audible behaviour and worst-case callback performance in hosts
 
 ### 3. Instrument and interface
 
-- [ ] Add MIDI support
-- [ ] Build the graphical interface
-- [ ] Package and test standalone and plugin builds
+- [x] Add MIDI support (channel 1, monophonic)
+- [x] Build the graphical interface (including MIDI controls and preset files)
+- [x] Compile Linux Standalone and VST3 Debug builds
+- [x] Implement preset files and verify processor state recall
+- [x] Configure macOS CI builds and unsigned development-artifact upload
+- [ ] Verify primary-Mac builds, test in two hosts and complete release packaging
 
 ### 4. Promptable modulation (experimental)
 

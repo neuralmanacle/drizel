@@ -9,7 +9,7 @@
 <JUCERPROJECT id="KI85iV" name="drizel" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
               companyName="Neural Manacle" companyEmail="neuralmanacle@gmail.com"
-              pluginCharacteristicsValue="pluginIsSynth" pluginName="drizel"
+              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn" pluginName="drizel"
               pluginDesc="a custom granular synthesizer" pluginManufacturer="Neural Manacle"
               pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aumu'" cppLanguageStandard="17" headerPath="src">
   <!-- Project-tree membership is explicit; adding a folder on disk alone
@@ -23,6 +23,7 @@
       <FILE id="gqNcRR" name="PluginEditor.cpp" compile="1" resrc="0" file="src/PluginEditor.cpp" />
       <FILE id="pLXkd7" name="PluginEditor.h" compile="0" resrc="0" file="src/PluginEditor.h" />
       <GROUP id="D17ff8" name="audio">
+        <FILE id="DrzMidi9" name="MidiInstrument.h" compile="0" resrc="0" file="src/audio/MidiInstrument.h" />
         <FILE id="Rt0" name="Grain.h" compile="0" resrc="0" file="src/audio/Grain.h" />
         <FILE id="Rt1" name="GrainCloud.h" compile="0" resrc="0" file="src/audio/GrainCloud.h" />
         <FILE id="Rt2" name="RealtimeEngine.h" compile="0" resrc="0" file="src/audio/RealtimeEngine.h" />
@@ -44,11 +45,15 @@
       </GROUP>
     </GROUP>
     <GROUP id="D152af" name="tests">
+      <FILE id="DrzProcT9" name="PluginProcessorTests.cpp" compile="0" resrc="0" file="tests/PluginProcessorTests.cpp" />
+      <FILE id="DrzMidiT9" name="MidiInstrumentTests.cpp" compile="0" resrc="0" file="tests/MidiInstrumentTests.cpp" />
       <FILE id="DrzMT7" name="ModulationTests.cpp" compile="0" resrc="0" file="tests/ModulationTests.cpp" />
       <FILE id="DrzSig" name="SignalPrimitiveTests.cpp" compile="0" resrc="0" file="tests/SignalPrimitiveTests.cpp" />
       <FILE id="D32d9a" name="AudioDataTests.cpp" compile="0" resrc="0" file="tests/AudioDataTests.cpp" />
     </GROUP>
     <GROUP id="D5a860" name="docs">
+      <FILE id="DrzLog9" name="2026-11-05-step-9.md" compile="0" resrc="0" file="docs/devlog/2026-11-05-step-9.md" />
+      <FILE id="DrzGuide9" name="step-9-instrument.md" compile="0" resrc="0" file="docs/step-9-instrument.md" />
       <FILE id="DrzLog8" name="2026-10-25-layer-8-interface.md" compile="0" resrc="0" file="docs/devlog/2026-10-25-layer-8-interface.md" />
       <FILE id="DrzUI8" name="step-8-interface.md" compile="0" resrc="0" file="docs/step-8-interface.md" />
       <FILE id="DrzD7" name="step-7-modulation.md" compile="0" resrc="0" file="docs/step-7-modulation.md" />

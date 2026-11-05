@@ -111,7 +111,7 @@ public:
                 static_cast<double>(source_->frameCount() - 1));
         if (std::isfinite(semitones))
             settings_.semitones = std::clamp(semitones,
-                -48.0 + settings_.pitchSpread, 48.0 - settings_.pitchSpread);
+                -153.0 + settings_.pitchSpread, 153.0 - settings_.pitchSpread);
         if (std::isfinite(density))
         {
             const double nextInterval = settings_.outputRate

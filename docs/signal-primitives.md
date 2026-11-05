@@ -91,13 +91,15 @@ half speed. For different sample rates, the future increment is
 grain lifetime are deliberately outside these two primitives.
 
 Linear interpolation is a starting point, not an anti-aliasing filter. It can
-attenuate high frequencies, and faster playback can alias. Higher-order or
-band-limited methods and listening/spectral comparisons remain roadmap work.
+attenuate high frequencies, and faster playback can alias. Cubic Hermite is also implemented through `InterpolationMode::hermite` and the
+same `readSample` interface. It uses four source samples and can overshoot; tests
+cover integer reads, polynomial reconstruction and boundary safety. Band-limited
+methods and listening/spectral comparisons remain roadmap work.
 
 ## Build and verify
 
 The normal CMake build now registers `signal_primitives` with CTest, alongside
-the existing audio-data and CLI-usage entries. Its executable runs ten named
+the existing audio-data and CLI-usage entries. Its executable runs twelve named
 cases; checks remain active in Release builds. It links only `drizel_core`.
 
 ```sh

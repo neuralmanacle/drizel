@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "audio/RealtimeEngine.h"
 #include "audio/Modulation.h"
+#include "audio/MidiInstrument.h"
 
 // Host-facing wrapper. Audio owns the engine; the loader owns all disk I/O.
 class DrizelAudioProcessor : public juce::AudioProcessor, private juce::Thread
@@ -16,10 +17,10 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
     const juce::String getName() const override { return JucePlugin_Name; }
-    bool acceptsMidi() const override { return false; } // MIDI belongs to a later step.
+    bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 0.1; }
+    double getTailLengthSeconds() const override { return 5.1; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
     void setCurrentProgram(int) override {}
@@ -28,6 +29,8 @@ public:
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
 
+    bool savePreset(const juce::File&); // Message thread file I/O.
+    bool loadPreset(const juce::File&);
     void requestSample(const juce::File&); // Control thread only; queues a path.
     struct SampleDisplayState { juce::String path; std::uint64_t revision; };
     SampleDisplayState loadedSampleState(); // Message-thread snapshot under loader lock.
@@ -39,6 +42,13 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeParameters();
     void run() override; // Loader loop, including packet reclamation.
+    drizel::MidiInstrument instrument;
+    bool previousMidiMode = false;
+    std::atomic<bool> resetInstrument {false};
+    std::atomic<float>* midiMode = nullptr;
+    std::atomic<float>* attack = nullptr;
+    std::atomic<float>* release = nullptr;
+    std::atomic<float>* rootNote = nullptr;
     drizel::Lfo lfo;
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
