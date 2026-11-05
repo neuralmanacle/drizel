@@ -7,9 +7,15 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(loadButton);
     addAndMakeVisible(playButton);
     addAndMakeVisible(status);
-    const char* ids[] = {"position", "pitch", "density", "gain", "lfoRate", "lfoDepth"};
+    addAndMakeVisible(saveButton);
+    addAndMakeVisible(presetButton);
+    addAndMakeVisible(midiHelp);
+    midiHelp.setText("MIDI ch 1 | Last note wins | Bend +/-2 | CC1 LFO | CC74 position | CC71 density", juce::dontSendNotification);
+    saveButton.onClick = [this] { choosePreset(true); };
+    presetButton.onClick = [this] { choosePreset(false); };
+    const char* ids[] = {"position", "pitch", "density", "gain", "lfoRate", "lfoDepth", "attack", "release", "rootNote"};
     const char* names[] = {"Position", "Pitch / semitones", "Density / grains per second",
-                          "Output gain", "LFO rate / Hz", "LFO depth", "LFO shape", "LFO destination"};
+                          "Output gain", "LFO rate / Hz", "LFO depth", "Attack / seconds", "Release / seconds", "Root MIDI note", "LFO shape", "LFO destination", "Mode"};
     for (std::size_t i = 0; i < labels.size(); ++i)
     {
         labels[i].setText(names[i], juce::dontSendNotification);
@@ -24,6 +30,9 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     }
     shape.addItemList(juce::StringArray{"Sine", "Triangle"}, 1);
     destination.addItemList(juce::StringArray{"Off", "Position", "Pitch"}, 1);
+    mode.addItemList(juce::StringArray{"Drone", "MIDI"}, 1);
+    addAndMakeVisible(mode);
+    modeAttachment = std::make_unique<ComboAttachment>(processor.parameters, "midiMode", mode);
     addAndMakeVisible(shape);
     addAndMakeVisible(destination);
     shapeAttachment = std::make_unique<ComboAttachment>(processor.parameters, "lfoShape", shape);
@@ -40,7 +49,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                     safe->processor.requestSample(dialog.getResult());
             });
     };
-    setSize(760, 650);
+    setSize(760, 750);
     startTimerHz(30);
     timerCallback();
 }
@@ -55,7 +64,7 @@ void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, in
 }
 void DrizelAudioProcessorEditor::timerCallback()
 {
-    status.setText(processor.loadStatus(), juce::dontSendNotification);
+    status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
     const auto sample = processor.loadedSampleState();
     if (sample.revision != waveformRevision)
     {
@@ -101,19 +110,42 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 }
 void DrizelAudioProcessorEditor::resized()
 {
-    loadButton.setBounds(520, 16, 130, 32);
-    playButton.setBounds(660, 16, 80, 32);
+    loadButton.setBounds(285, 16, 100, 32);
+    presetButton.setBounds(395, 16, 110, 32);
+    saveButton.setBounds(515, 16, 110, 32);
+    playButton.setBounds(635, 16, 105, 32);
     status.setBounds(20, 52, getWidth() - 40, 30);
     waveformBounds = {20, 90, getWidth() - 40, 140};
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < 12; ++i)
     {
         const int x = 20 + (i % 2) * 370;
-        const int y = 280 + (i / 2) * 76;
+        const int y = 280 + (i / 2) * 64;
         labels[static_cast<std::size_t>(i)].setBounds(x, y, 350, 24);
         auto area = juce::Rectangle<int>(x, y + 26, 350, 32);
-        if (i < 6) sliders[static_cast<std::size_t>(i)].setBounds(area);
-        else if (i == 6) shape.setBounds(area);
-        else destination.setBounds(area);
+        if (i < 9) sliders[static_cast<std::size_t>(i)].setBounds(area);
+        else if (i == 9) shape.setBounds(area);
+        else if (i == 10) destination.setBounds(area);
+        else mode.setBounds(area);
     }
-    meterBounds = {20, 610, getWidth() - 40, 16};
+    midiHelp.setBounds(20, 680, 720, 30);
+    meterBounds = {20, 720, getWidth() - 40, 16};
+}
+
+void DrizelAudioProcessorEditor::choosePreset(bool save)
+{
+    chooser = std::make_unique<juce::FileChooser>(save ? "Save Drizel preset" : "Load Drizel preset",
+        save ? juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Preset.drizel")
+             : juce::File{}, "*.drizel");
+    auto safe = juce::Component::SafePointer<DrizelAudioProcessorEditor>(this);
+    const int flags = juce::FileBrowserComponent::canSelectFiles | (save
+        ? juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting
+        : juce::FileBrowserComponent::openMode);
+    chooser->launchAsync(flags, [safe, save](const juce::FileChooser& dialog)
+    {
+        if (safe == nullptr || dialog.getResult() == juce::File{}) return;
+        // Keep the exact chosen path so overwrite confirmation covers the written file.
+        const auto file = dialog.getResult();
+        const bool ok = save ? safe->processor.savePreset(file) : safe->processor.loadPreset(file);
+        safe->presetStatus = ok ? (save ? " | Preset saved" : " | Preset recalled") : " | Preset failed";
+    });
 }
