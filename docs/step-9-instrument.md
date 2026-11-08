@@ -114,24 +114,24 @@ Before marking Layers 7/8 complete, record the actual results:
 
 ## Get Step 9 on your Mac
 
-Step 9 is on `step-9-midi-and-packaging`; it is not merged into `main` yet.
-From your existing checkout (replace the first path with your local repo):
+Step 9 was merged into `main` in commit `341d211` on 5 November 2026.
+For the current implementation, use `main` from your existing checkout (replace
+the first path with your local repo):
 
 ```sh
 cd /path/to/drizel
 git status
 git fetch origin
-git switch step-9-midi-and-packaging
-git pull --ff-only origin step-9-midi-and-packaging
+git switch main
+git pull --ff-only origin main
 git log -1 --oneline
 ```
 
-On first checkout, `git switch` creates a tracking branch from the fetched
-remote branch. Commit or stash local edits first if Git reports a conflict;
-these commands do not discard edits. For a separate clean checkout instead:
+Commit or stash local edits first if Git reports a conflict; these commands
+do not discard edits. For a separate clean checkout instead:
 
 ```sh
-git clone --branch step-9-midi-and-packaging https://github.com/neuralmanacle/drizel.git drizel-step-9
+git clone --branch main https://github.com/neuralmanacle/drizel.git drizel-step-9
 cd drizel-step-9
 ```
 
@@ -161,3 +161,12 @@ preset. Switch to Drone to check audio output without a MIDI keyboard.
 - `tests/MidiInstrumentTests.cpp`: core behaviour and partitioned event timeline.
 - `tests/PluginProcessorTests.cpp`: actual MIDI offsets, output gating, presets and host state.
 - `CMakeLists.txt` and `drizel.jucer`: MIDI-enabled build configuration.
+
+## Next steps
+
+Start [Step 10 in the post-Step-9 plan](post-step-9-plan.md#step-10--validate-and-measure-the-playable-instrument)
+with the outstanding acceptance checks above. Follow with general modulation,
+DSP quality, sample analysis, audio ML and optional embedded deployment. The
+[learning curriculum](../learnings/audio-dsp-ml-curriculum.md) maps theory to each
+step and the [evidence guide](proof-of-work.md) defines completion claims.
+This planning update does not change Step 9's validation results.

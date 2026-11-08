@@ -6,11 +6,16 @@
 
 Drizel explores sound design through sample playback, overlapping grains, and modulation. The granular DSP engine is being implemented from scratch, with JUCE providing the application and audio plugin framework.
 
+The next development path uses Drizel to learn and demonstrate audio DSP,
+sample analysis, audio ML, local C++ inference and embedded audio. These are
+planned extensions, not capabilities already delivered. Start with the
+[post-Step-9 plan](docs/post-step-9-plan.md) and its measurable milestones.
+
 An experimental part of the vision is **promptable modulation**: describe how
 the sound should move, then let a model translate that intention into an editable
 modulation policy. Grain scanning is the first proposed use case.
 
-> **Status — 5 November 2026:** Step 9 combines MIDI instrument behaviour
+> **Status — 8 November 2026:** Step 9 is merged into `main` and combines MIDI instrument behaviour
 > (Layer 7) with interface/preset and packaging work (Layer 8). One shared cloud
 > supports last-note priority, velocity envelopes, bend and CC control; Drone
 > mode preserves continuous textures. See the [Step 9 guide](docs/step-9-instrument.md)
@@ -20,14 +25,19 @@ modulation policy. Grain scanning is the first proposed use case.
 
 Drizel is an independent audio software project developed alongside a structured study of C++ and digital signal processing. It combines practical DSP implementation with documented experiments and design decisions.
 
-The project focuses on four goals:
+The project focuses on six goals:
 
 - **Custom DSP:** Implement grain playback, windowing, interpolation, and scheduling without an existing granular synthesis library.
 - **Real-time performance:** Design audio processing with predictable execution and careful memory management.
 - **Playable sound design:** Develop an instrument with expressive modulation, MIDI control, and a dedicated interface.
 - **Promptable behaviour:** Explore natural-language control of modulation while keeping the instrument usable with conventional controls alone.
+- **Sample-aware DSP and ML:** Analyse recordings, compare conventional selection with small learned models, and deploy useful results locally.
+- **Portable engineering:** Measure CPU/memory costs and investigate a reduced hardware instrument after validating the desktop engine.
 
-## Planned capabilities
+## Implemented foundation and planned extensions
+
+The following foundation has implementation in the repository; host/release
+acceptance remains tracked separately below.
 
 - WAV sample loading and buffered playback
 - Windowed grains with interpolated sample playback
@@ -37,6 +47,11 @@ The project focuses on four goals:
 - MIDI input and control
 - Graphical user interface
 - Standalone application and audio plugin builds
+
+Planned extensions (Steps 13–20):
+
+- Sample analysis and feature-guided grain selection, followed by an evaluated audio-region model and local C++ inference.
+- A reduced embedded granular instrument, followed by optional on-device ML.
 - Optional promptable modulation policies (experimental): a model interprets
   descriptions of movement, and local modulation sources execute the accepted
   behaviour outside the model's inference loop
@@ -98,7 +113,32 @@ scope, example interpretations, execution design, and experiments still needed.
 - [ ] Add a lock-free modulation queue with timestamped breakpoints and lookahead
 - [ ] Run inference on a worker, including network requests if a hosted model is used; keep local modulation running when a response is late
 
-See the [development roadmap](docs/roadmap.md) for further detail.
+See the [development roadmap](docs/roadmap.md) for existing layer status.
+
+### After Step 9: learning and proof of work
+
+All entries below are **planned**. Step numbers describe delivery increments;
+they do not renumber the existing architectural layers.
+
+| Step | Deliverable | Proof of work |
+|---|---|---|
+| 10 | Validate and profile the current instrument | Host/listening checks, timing report and keyboard demo |
+| 11 | General modulation sources and routing | Source plots, bounded routing tests and sound examples |
+| 12 | Grain/resampling quality | Spectral and listening comparisons with CPU/memory costs |
+| 13 | Python audio-characteristic analysis | Reproducible feature plots and versioned sample map |
+| 14 | Sample-aware granular playback | C++ parity checks and feature-guided selection demo |
+| 15 | Small audio-region classifier | Data/model cards, baselines and held-out evaluation |
+| 16 | Local C++ audio-model deployment | Python/C++ parity, resource report and fallback demo |
+| 17 | Editable promptable modulation | Prompt/policy/render comparisons and failure tests |
+| 18 | Neural audio-effect study (optional) | DSP/neural comparison and deployment verdict |
+| 19 | Reduced embedded granular instrument | Actual hardware demo, firmware and resource measurements |
+| 20 | Embedded audio inference (optional) | Quantisation comparison and on-device audio/ML evidence |
+
+Follow the [detailed step plan](docs/post-step-9-plan.md),
+[learning curriculum](learnings/audio-dsp-ml-curriculum.md) and
+[proof-of-work requirements](docs/proof-of-work.md). Step 10 closes the current
+acceptance gaps first. Offline study may start earlier; optional research and
+hardware branches do not block the usable core instrument.
 
 ## Proposed architecture
 
@@ -206,9 +246,8 @@ the plugin; the WAV adapter runs only on its background loader thread.
 | `src/audio/` | Framework-independent audio data and future DSP |
 | `src/io/` | Offline file I/O adapters |
 | `tests/` | Command-line audio-data tests, run through CTest |
-| `experiments/` | Focused DSP prototypes and exploratory code |
-| `experiments/llm-control/` | Studies on model-driven modulation: prompts, latency, failure modes |
-| `learnings/` | C++, digital audio, and DSP study notes |
+| `experiments/` | Existing offline renderers and [planned study organisation](experiments/README.md) |
+| `learnings/` | C++, DSP, audio ML and embedded study notes and curriculum |
 | `docs/` | Architecture, design decisions, and roadmap |
 | `docs/devlog/` | Dated progress reports with validation results and remaining work |
 

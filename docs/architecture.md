@@ -13,21 +13,13 @@ The callback borrows host buffers and never decodes or destroys sample storage.
 
 ## Data flow
 
-```text
-SourceBuffer
-    ↓
-GrainScheduler
-    ↓
-GrainPool
-    ↓
-GrainReader
-    ↓
-Envelope
-    ↓
-Mixer
-    ↓
-OutputProcessor
-```
+| Current stage | Responsibility |
+|---|---|
+| Prepared source | Worker-decoded stable sample storage and prepared cloud |
+| Scheduler and pool | Launch grains into fixed-capacity reusable voices |
+| Grain reader and window | Interpolate source samples and shape grain amplitude |
+| Mixer and output | Sum voices, smooth controls, apply safety and MIDI amplitude gate |
+| Control path | Current LFO route and MIDI performance controls |
 
 ## Grain state
 
@@ -76,8 +68,8 @@ or a script. A malformed response would leave the current policy active.
 Policy changes would have an explicit activation point and smoothing policy.
 Replacing a sample would invalidate any pending policy that targets the old
 sample. The queue, capacity limits, and ownership handoff still need to be
-designed and tested during Layers 5, 6, and 9; none is implemented by the WAV
-milestone.
+designed and tested for the policy path in Step 17. Step 9 already has a
+separate sample-ownership handoff; that does not implement a policy queue.
 
 Preset state would include the interpreted policy, its version, edited values,
 and random seed as well as the original prompt. Restoring a supported policy
@@ -86,3 +78,52 @@ controls remain available when model interpretation is disabled.
 
 See the [promptable modulation proposal](promptable-modulation.md) for example
 prompts, boundary behaviour, and the planned experiments.
+
+## Post-Step-9 extension boundaries — planned
+
+The [delivery plan](post-step-9-plan.md) defines Steps 10–20 and their dependency
+gates. The table below is a design direction, not implemented class/API names.
+
+| Responsibility | Planned execution/ownership | Step |
+|---|---|---|
+| General sources and routes | Bounded audio-thread state with explicit units and reset rules | 11 |
+| Analysis reference | Offline Python experiment, independent of plugin runtime | 13 |
+| Source characteristics | Worker-prepared immutable map tied to source hash/generation, rate and settings | 14 |
+| Grain candidate selection | Prepared bounded tables; fixed/bounded work at launch, manual fallback | 14 |
+| Training and evaluation | Offline Python; recording-level splits and versioned features | 15 |
+| Region inference | Worker-side C++ model, versioned preprocessing and bounded result handoff | 16 |
+| Language interpretation | Worker, schema validation and UI preview before activation | 17 |
+| Numeric policy execution | Local engine source; continues without inference responses | 17 |
+| Neural audio effect | Optional causal path; separate bounded-memory/timing or buffered-latency design | 18 |
+| Embedded adapter | Hardware-specific audio/control I/O around the reduced independent core | 19 |
+| Embedded model | Budgeted preprocessing and inference scheduled alongside device audio | 20 |
+
+### Analysis and model handoff
+
+Keep source data alive until its analysis job ends. Reject results whose source,
+settings, model or generation no longer matches. Specify cancellation, pending
+capacity, replacement and shutdown before implementing the handoff. Audio-thread
+reads must not cause destruction of maps, models or reference-counted objects.
+The callback must never wait for analysis/inference to finish.
+
+Analysis maps are derived data. Define whether state saves a cache reference or
+regenerates a map; include source identity, schema and preprocessing versions.
+Missing maps/models should preserve conventional playback. No model-training or
+Python dependency is required for the ordinary plugin build or playback path.
+
+### Different inference workloads
+
+Region analysis/classification and prompt interpretation stay outside the audio
+callback. They can produce future controls or immutable labels. A neural audio
+effect is different: synchronous inference consumes callback time, while an
+asynchronous effect introduces buffering and latency. Step 18 requires a
+separate feasibility decision, reset/overload contract, allocation audit and
+actual timing measurements; it is not authorised by the worker-analysis design.
+
+### Hardware portability
+
+Keep generic buffers, grain rendering, modulation and analysis contracts separate
+from JUCE, codec drivers and ML runtimes. Select an embedded target from sample,
+voice, buffer, model and activation budgets. Replace desktop services with explicit
+hardware adapters and limited configurations; porting the whole desktop UI is
+not the Step 19 goal. Real device playback and measurement are acceptance gates.
