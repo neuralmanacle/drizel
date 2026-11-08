@@ -55,6 +55,17 @@ Layers 9–12 add sample understanding through DSP, then evaluated ML. Layer 13
 connects that foundation to language-based control. Layers 14–16 investigate
 neural effects and hardware without making them prerequisites for the instrument.
 
+## Plugin design/UI
+
+**Wild card — ongoing and unnumbered.** Explore the interface alongside any
+layer: visual identity, layout, controls, waveform/grain feedback, modulation,
+sample/preset workflows, accessibility and responsiveness. Document sketches,
+iterations, decisions and observations in the [Plugin design/UI notebook](plugin-design-ui.md).
+
+Return to this section whenever a design question arises. It is not a new step,
+layer or dependency gate. Layer 8 retains implementation/host acceptance; this
+notebook records the evolving design across the whole instrument.
+
 ## Guiding rules
 
 1. **Offline first, real-time second.** Render and measure before live integration.
@@ -389,6 +400,9 @@ measured cost. Keep the routable envelope separate from the final MIDI gate.
 ---
 
 ## Layer 8: Interface and packaging
+
+Ongoing visual and interaction studies live in the unnumbered
+[Plugin design/UI section](plugin-design-ui.md), which can be revisited alongside any layer.
 
 > Step 8 introduced host-bound controls, waveform/base-position marker,
 > active-grain telemetry, WAV drag-and-drop and output display. Step 9 extends

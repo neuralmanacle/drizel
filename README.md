@@ -147,6 +147,12 @@ Use the [curriculum](learnings/audio-dsp-ml-curriculum.md) and
 modulation and DSP quality gaps remain open; new analysis, ML and hardware
 capabilities remain planned.
 
+## Plugin design/UI
+
+An ongoing, unnumbered **wild card** for documenting the look and feel of Drizel:
+sketches, layouts, controls, interaction experiments and design decisions. Revisit
+it alongside any layer. Start in the [Plugin design/UI notebook](docs/plugin-design-ui.md).
+
 ## Proposed architecture
 
 The engine reads from a shared sample buffer. A scheduler starts grain voices, each with its own playback position, rate, and envelope. Active grains are summed to produce the output.

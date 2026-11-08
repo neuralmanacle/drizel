@@ -28,6 +28,12 @@ a working feature does not automatically establish personal understanding.
 | 15 | Embedded audio, memory, codec/DMA and hardware profiling |
 | 16, optional | Quantisation and measured on-device inference |
 
+## Plugin design/UI
+
+Use the [design notebook](../docs/plugin-design-ui.md) as an unnumbered wild card
+alongside any topic. Document visual references, layout/interaction experiments,
+what you learned and why a design changed. It has no fixed place in the layer sequence.
+
 ## Notes and experiments
 
 Write notes in original language: the concept, an equation/example, the relevant

@@ -89,6 +89,14 @@ Describe the ownership/execution boundary and one meaningful alternative.
 - Board revision, wiring, memory map, stack/heap accounting and firmware hash:
 - Reference comparison tolerance, reset/overload/fallback behaviour:
 
+### Design/UI record (when applicable)
+
+The [Plugin design/UI notebook](plugin-design-ui.md) is an ongoing wild card,
+not an additional milestone. For a design change, link the question, alternatives,
+annotated before/after views, rationale and observations. Distinguish a mockup
+from an implemented interface; include host, accessibility or playback checks
+when the implementation affects them. Exploratory notes can stay lightweight.
+
 ### Share and explain
 
 - A concise demo showing the exact change, with source/sample/settings identified:
