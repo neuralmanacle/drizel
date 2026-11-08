@@ -68,7 +68,7 @@ or a script. A malformed response would leave the current policy active.
 Policy changes would have an explicit activation point and smoothing policy.
 Replacing a sample would invalidate any pending policy that targets the old
 sample. The queue, capacity limits, and ownership handoff still need to be
-designed and tested for the policy path in Step 17. Step 9 already has a
+designed and tested for the policy path in Layer 13. Step 9 already has a
 separate sample-ownership handoff; that does not implement a policy queue.
 
 Preset state would include the interpreted policy, its version, edited values,
@@ -79,24 +79,24 @@ controls remain available when model interpretation is disabled.
 See the [promptable modulation proposal](promptable-modulation.md) for example
 prompts, boundary behaviour, and the planned experiments.
 
-## Post-Step-9 extension boundaries — planned
+## Analysis, ML and hardware boundaries — planned
 
-The [delivery plan](post-step-9-plan.md) defines Steps 10–20 and their dependency
+The [roadmap](roadmap.md) defines the capability layers and their dependency
 gates. The table below is a design direction, not implemented class/API names.
 
-| Responsibility | Planned execution/ownership | Step |
+| Responsibility | Planned execution/ownership | Layer |
 |---|---|---|
-| General sources and routes | Bounded audio-thread state with explicit units and reset rules | 11 |
-| Analysis reference | Offline Python experiment, independent of plugin runtime | 13 |
-| Source characteristics | Worker-prepared immutable map tied to source hash/generation, rate and settings | 14 |
-| Grain candidate selection | Prepared bounded tables; fixed/bounded work at launch, manual fallback | 14 |
-| Training and evaluation | Offline Python; recording-level splits and versioned features | 15 |
-| Region inference | Worker-side C++ model, versioned preprocessing and bounded result handoff | 16 |
-| Language interpretation | Worker, schema validation and UI preview before activation | 17 |
-| Numeric policy execution | Local engine source; continues without inference responses | 17 |
-| Neural audio effect | Optional causal path; separate bounded-memory/timing or buffered-latency design | 18 |
-| Embedded adapter | Hardware-specific audio/control I/O around the reduced independent core | 19 |
-| Embedded model | Budgeted preprocessing and inference scheduled alongside device audio | 20 |
+| General sources and routes | Bounded audio-thread state with explicit units and reset rules | 6 |
+| Analysis reference | Offline Python experiment, independent of plugin runtime | 9 |
+| Source characteristics | Worker-prepared immutable map tied to source hash/generation, rate and settings | 10 |
+| Grain candidate selection | Prepared bounded tables; fixed/bounded work at launch, manual fallback | 10 |
+| Training and evaluation | Offline Python; recording-level splits and versioned features | 11 |
+| Region inference | Worker-side C++ model, versioned preprocessing and bounded result handoff | 12 |
+| Language interpretation | Worker, schema validation and UI preview before activation | 13 |
+| Numeric policy execution | Local engine source; continues without inference responses | 13 |
+| Neural audio effect | Optional causal path; separate bounded-memory/timing or buffered-latency design | 14 |
+| Embedded adapter | Hardware-specific audio/control I/O around the reduced independent core | 15 |
+| Embedded model | Budgeted preprocessing and inference scheduled alongside device audio | 16 |
 
 ### Analysis and model handoff
 
@@ -116,7 +116,7 @@ Python dependency is required for the ordinary plugin build or playback path.
 Region analysis/classification and prompt interpretation stay outside the audio
 callback. They can produce future controls or immutable labels. A neural audio
 effect is different: synchronous inference consumes callback time, while an
-asynchronous effect introduces buffering and latency. Step 18 requires a
+asynchronous effect introduces buffering and latency. Layer 14 requires a
 separate feasibility decision, reset/overload contract, allocation audit and
 actual timing measurements; it is not authorised by the worker-analysis design.
 
@@ -126,4 +126,4 @@ Keep generic buffers, grain rendering, modulation and analysis contracts separat
 from JUCE, codec drivers and ML runtimes. Select an embedded target from sample,
 voice, buffer, model and activation budgets. Replace desktop services with explicit
 hardware adapters and limited configurations; porting the whole desktop UI is
-not the Step 19 goal. Real device playback and measurement are acceptance gates.
+not the Layer 15 goal. Real device playback and measurement are acceptance gates.

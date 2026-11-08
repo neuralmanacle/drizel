@@ -8,26 +8,25 @@ a working feature does not automatically establish personal understanding.
 
 1. Review [prerequisites](prerequisites.md) and explain the current engine from
    the [code guide](../docs/code-guide.md).
-2. Follow the [post-Step-9 delivery plan](../docs/post-step-9-plan.md), starting
-   with Step 10 host acceptance and timing measurements.
+2. Follow the [roadmap](../docs/roadmap.md), closing existing host, timing,
+   modulation and sound-quality gaps before live analysis/ML integration.
 3. Use the matching block in the [DSP/ML/embedded curriculum](audio-dsp-ml-curriculum.md).
 4. Publish a reproducible experiment and result with the
    [proof-of-work template](../docs/proof-of-work.md).
 
 ## Learning order
 
-| Block | Concepts | Delivery steps |
-|---|---|---|
-| Foundations | C++, ownership, sampled audio, maths, MIDI and plugin lifecycle | Revisit existing Steps 1–9 as needed |
-| Reliable instrument | Timing budgets, concurrency, modulation and host behaviour | 10–11 |
-| Sound quality | Fourier analysis, windows, filtering and resampling | 12 |
-| Audio understanding | Python, signal characteristics and sample maps | 13–14 |
-| Applied ML | Dataset design, baselines, neural training and evaluation | 15 |
-| Local deployment | C++ parity, inference, state and fallback | 16 |
-| Language control | Validated policies, preview and deterministic execution | 17 |
-| Neural audio | Causal effect modelling and real-time feasibility | 18, optional |
-| Hardware | Embedded audio bring-up, memory, DMA and profiling | 19 |
-| Edge ML | Quantisation, runtime compatibility and on-device measurements | 20, optional |
+| Layers | Concepts |
+|---|---|
+| 0–2 | C++, ownership, sampled audio, maths, windows, filtering and resampling |
+| 3–4 | Grain rendering, scheduling, mixing and bounded voice state |
+| 5–8 | Timing, concurrency, modulation, MIDI, UI, presets and host acceptance |
+| 9–10 | Python, signal characteristics, C++ analysis and sample-aware selection |
+| 11–12 | Dataset design, baselines, neural training, evaluation and C++ inference |
+| 13 | Validated language policies, preview and deterministic execution |
+| 14, optional | Causal neural effects and real-time feasibility |
+| 15 | Embedded audio, memory, codec/DMA and hardware profiling |
+| 16, optional | Quantisation and measured on-device inference |
 
 ## Notes and experiments
 
