@@ -3,7 +3,7 @@
 **Updated 8 November 2026 for the merged Step 9 implementation.** The plugin is
 a playable shared-cloud MIDI instrument, not the original silent JUCE scaffold.
 Audio analysis, model inference, general modulation and embedded deployment are
-planned work; see the [post-Step-9 plan](post-step-9-plan.md).
+planned work; see the [roadmap](roadmap.md).
 
 ## Reading order
 
@@ -88,20 +88,20 @@ See the [Step 9 verification log](devlog/2026-11-05-step-9.md) for recorded resu
 A numerical test, successful CI build or validator run does not substitute for
 listening, primary-machine host acceptance or measured callback headroom.
 
-## How the next work attaches
+## How the layers attach
 
-| Step | Starting point | Planned boundary |
+| Layer | Starting point | Planned or remaining work |
 |---|---|---|
-| 10 | Existing tests, processor and engine | Measurement and host/listening evidence |
-| 11 | Modulation and smoothed controls | Bounded general source/route interface |
-| 12 | Windows, interpolation and grain reader | Measured quality option, not assumed alias rejection |
-| 13–14 | Source buffer and loading ownership | Offline reference then worker-prepared analysis maps |
-| 15–16 | Analysis feature schema | Evaluated classifier then worker-side C++ inference |
-| 17 | Step 11 routes and local policy executor | Validated numeric policy crosses into playback |
-| 18 | Optional output-stage experiment | Audio-rate inference needs a separate real-time audit |
-| 19–20 | Framework-independent core | Separate hardware adapter, then optional tiny inference |
+| 2 | Windows, interpolation and grain reader | Measured filtering/resampling quality |
+| 5 | Existing tests, processor and engine | Timing and host/listening evidence |
+| 6 | Modulation and smoothed controls | Bounded general source/route interface |
+| 9–10 | Source buffer and loader ownership | Offline reference then worker-prepared maps and selection |
+| 11–12 | Analysis feature schema | Evaluated classifier then worker-side C++ inference |
+| 13 | Layer 6 routes and local policy executor | Validated numeric policy crosses into playback |
+| 14 | Optional output-stage experiment | Audio-rate inference needs its own timing/memory audit |
+| 15–16 | Framework-independent core | Hardware adapter, then optional tiny inference |
 
 Proposed source directories and experiment names in planning docs are not
-implemented APIs. Consult the [architecture](architecture.md),
+implemented APIs. Consult the [roadmap](roadmap.md), [architecture](architecture.md),
 [curriculum](../learnings/audio-dsp-ml-curriculum.md) and
-[evidence template](proof-of-work.md) before starting a new step.
+[evidence template](proof-of-work.md) when working through a layer.

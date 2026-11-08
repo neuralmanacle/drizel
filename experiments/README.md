@@ -1,7 +1,7 @@
 # Experiments
 
 Experiments answer a small question before a production change. See the
-[post-Step-9 plan](../docs/post-step-9-plan.md), [curriculum](../learnings/audio-dsp-ml-curriculum.md)
+[roadmap](../docs/roadmap.md), [curriculum](../learnings/audio-dsp-ml-curriculum.md)
 and [evidence template](../docs/proof-of-work.md) for scope and acceptance.
 
 ## Existing entry points
@@ -16,19 +16,19 @@ The C++ programs build through root CMake. Follow the [root build instructions](
 
 ## Proposed experiments — not created or implemented yet
 
-| Proposed directory | Step | Question |
+| Proposed directory | Layer | Question |
 |---|---|---|
-| `realtime-benchmark/` | 10 | What workload fits the measured callback budget? |
-| `modulation/` | 11 | Are sources/routes bounded, repeatable and musically useful? |
-| `resampling-quality/` | 12 | What sound-quality/cost trade-off does each reader provide? |
-| `sample-analysis/` | 13 | Can audio characteristics be mapped reliably to source time? |
-| `sample-selection/` | 14 | Do feature-guided grain choices improve control? |
-| `audio-region-classifier/` | 15 | Does a small model improve on the DSP/simple learned baseline? |
-| `cpp-inference/` | 16 | Do deployed preprocessing/predictions agree with Python? |
-| `llm-control/` | 17 | Are editable prompt-derived policies useful and reliable? |
-| `neural-effect/` | 18, optional | Does a small neural effect justify its runtime cost? |
-| `embedded-audio/` | 19 | Can the reduced engine run on actual hardware? |
-| `embedded-inference/` | 20, optional | Can a useful model coexist with the device's audio budget? |
+| `resampling-quality/` | 2 | What sound-quality/cost trade-off does each reader provide? |
+| `realtime-benchmark/` | 5, 7–8 | What workload fits the callback budget and host acceptance? |
+| `modulation/` | 6 | Are sources/routes bounded, repeatable and musically useful? |
+| `sample-analysis/` | 9 | Can audio characteristics be mapped reliably to source time? |
+| `sample-selection/` | 10 | Do feature-guided grain choices improve control? |
+| `audio-region-classifier/` | 11 | Does a model improve on DSP/simple learned baselines? |
+| `cpp-inference/` | 12 | Do deployed preprocessing/predictions agree with Python? |
+| `llm-control/` | 13 | Are editable prompt-derived policies useful and reliable? |
+| `neural-effect/` | 14, optional | Does a small neural effect justify its runtime cost? |
+| `embedded-audio/` | 15 | Can the reduced engine run on actual hardware? |
+| `embedded-inference/` | 16, optional | Can a useful model coexist with the audio budget? |
 
 Create only the directory needed for the active experiment. Its README should
 state the hypothesis, input provenance, setup, exact commands, output location,

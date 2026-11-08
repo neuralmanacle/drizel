@@ -22,28 +22,28 @@ Use the [curriculum](audio-dsp-ml-curriculum.md) and
 | [ ] | MIDI notes, envelopes and controllers | [MidiInstrument](../src/audio/MidiInstrument.h) | Explain last-note priority and event timing versus audible response |
 | [ ] | Plugin lifecycle, UI and state | [Step 9 guide](../docs/step-9-instrument.md) | Build/play and explain host state, missing samples and reset behaviour |
 
-## New study linked to delivery
+## Study mapped to the capability layers
 
-| Learned | Topic | Step | Required study evidence |
+| Learned | Topic | Layer | Required study evidence |
 |---|---|---|---|
-| [ ] | Profiling and callback deadlines | 10 | Measured timing distribution and buffer deadline calculation |
-| [ ] | General modulation architecture | 11 | Source/route model, units, bounded work and reset examples |
-| [ ] | Complex numbers, DFT/FFT and STFT | 12–13 | Known-signal spectra and frame/hop/time-resolution explanation |
-| [ ] | FIR/IIR, convolution and resampling | 12 | Response/aliasing and listening comparison with cost measurements |
-| [ ] | Python/NumPy/SciPy and reproducible analysis | 13 | A script that regenerates annotated feature plots |
-| [ ] | Audio characteristics and pitch uncertainty | 13 | Attack/sustain/noise examples and documented failure cases |
-| [ ] | Python/C++ feature parity and analysis ownership | 14 | Matching fixtures plus stale/cancelled job handling |
-| [ ] | Linear algebra, derivatives and probability | 15 | Worked forward pass, loss and gradient example |
-| [ ] | Dataset provenance, splits and leakage | 15 | Recording-level split manifest and training-only preprocessing |
-| [ ] | Baselines, PyTorch training and evaluation | 15 | Held-out comparison, confusion matrix and error analysis |
-| [ ] | Model export, C++ inference and recovery | 16 | Golden-input parity, resource costs and fallback demo |
-| [ ] | Prompt interpretation and deterministic policy execution | 17 | Schema validation, replay and late/stale response experiments |
-| [ ] | Causal neural audio effects | 18, optional | Offline DSP/neural comparison and deployment feasibility report |
-| [ ] | Embedded C/C++, codec/I²S, DMA and memory budgets | 19 | Actual board audio, wiring and target resource report |
-| [ ] | Fixed point and numerical scaling | 19 study; implementation if justified | Overflow/saturation example and float/reference comparison |
-| [ ] | Quantisation and embedded neural runtimes | 20, optional | Float/quantised comparison and measured on-device inference |
+| [ ] | Profiling and callback deadlines | 5, 7–8 | Measured timing distribution and buffer deadline calculation |
+| [ ] | General modulation architecture | 6 | Source/route model, units, bounded work and reset examples |
+| [ ] | Complex numbers, DFT/FFT and STFT | 2 and 9 | Known-signal spectra and frame/hop/time-resolution explanation |
+| [ ] | FIR/IIR, convolution and resampling | 2 | Response/aliasing and listening comparison with cost measurements |
+| [ ] | Python/NumPy/SciPy and reproducible analysis | 9 | A script that regenerates annotated feature plots |
+| [ ] | Audio characteristics and pitch uncertainty | 9 | Attack/sustain/noise examples and documented failure cases |
+| [ ] | Python/C++ feature parity and analysis ownership | 10 | Matching fixtures plus stale/cancelled job handling |
+| [ ] | Linear algebra, derivatives and probability | 11 | Worked forward pass, loss and gradient example |
+| [ ] | Dataset provenance, splits and leakage | 11 | Recording-level split manifest and training-only preprocessing |
+| [ ] | Baselines, PyTorch training and evaluation | 11 | Held-out comparison, confusion matrix and error analysis |
+| [ ] | Model export, C++ inference and recovery | 12 | Golden-input parity, resource costs and fallback demo |
+| [ ] | Prompt interpretation and deterministic policy execution | 13 | Schema validation, replay and late/stale response experiments |
+| [ ] | Causal neural audio effects | 14, optional | Offline DSP/neural comparison and deployment feasibility report |
+| [ ] | Embedded C/C++, codec/I²S, DMA and memory budgets | 15 | Actual board audio, wiring and target resource report |
+| [ ] | Fixed point and numerical scaling | 15 study; implementation if justified | Overflow/saturation example and float/reference comparison |
+| [ ] | Quantisation and embedded neural runtimes | 16, optional | Float/quantised comparison and measured on-device inference |
 | [ ] | Adaptive filtering and speech DSP | Optional side study | Controlled LMS/NLMS experiment and explanation of AEC/ANC/AFC |
 
 Record completion dates and links to actual notes/reports when confirming a
 row. Existing layer implementation status remains in [the roadmap](../docs/roadmap.md);
-future deliverable acceptance remains in [the step plan](../docs/post-step-9-plan.md).
+each layer's acceptance criteria are tracked there alongside its study and proof of work.

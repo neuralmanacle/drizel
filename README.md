@@ -6,10 +6,10 @@
 
 Drizel explores sound design through sample playback, overlapping grains, and modulation. The granular DSP engine is being implemented from scratch, with JUCE providing the application and audio plugin framework.
 
-The next development path uses Drizel to learn and demonstrate audio DSP,
-sample analysis, audio ML, local C++ inference and embedded audio. These are
-planned extensions, not capabilities already delivered. Start with the
-[post-Step-9 plan](docs/post-step-9-plan.md) and its measurable milestones.
+The roadmap connects custom DSP, reliable playback, sample analysis, evaluated
+audio ML and embedded deployment as one learning/building sequence. See the
+[development roadmap](docs/roadmap.md) for implementation status, study topics,
+experiments, validation and proof of work at each layer.
 
 An experimental part of the vision is **promptable modulation**: describe how
 the sound should move, then let a model translate that intention into an editable
@@ -48,7 +48,7 @@ acceptance remains tracked separately below.
 - Graphical user interface
 - Standalone application and audio plugin builds
 
-Planned extensions (Steps 13–20):
+Planned capabilities in Layers 9–16:
 
 - Sample analysis and feature-guided grain selection, followed by an evaluated audio-region model and local C++ inference.
 - A reduced embedded granular instrument, followed by optional on-device ML.
@@ -102,43 +102,56 @@ scope, example interpretations, execution design, and experiments still needed.
 - [x] Configure macOS CI builds and unsigned development-artifact upload
 - [ ] Verify primary-Mac builds, test in two hosts and complete release packaging
 
-### 4. Promptable modulation (experimental)
+### 4. Audio analysis and ML
+
+- [ ] Map sample characteristics and verify Python/C++ feature agreement (Layers 9–10)
+- [ ] Add feature-guided grain selection with manual fallback (Layer 10)
+- [ ] Compare DSP/simple-model and neural region classification on held-out recordings (Layer 11)
+- [ ] Deploy a useful model in local C++ with measured cost and recovery (Layer 12)
+
+### 5. Promptable modulation (experimental, Layer 13)
 
 - [ ] Define editable modulation policies for grain scan: irregular movement, cyclic scans, and directional step patterns
 - [ ] Run small studies in `experiments/` on which control tasks a model can handle and what prompting it needs
 - [ ] Translate prompts into a bounded policy schema and preview the interpretation before applying it
 - [ ] Execute accepted policies locally, with repeatable seeds and saved settings
 - [ ] Measure inference latency and jitter from the target deployment location
-- [ ] Analyse samples offline (onsets, loudness, spectral features) to give the model a semantic map
+- [ ] Use the Layers 9–10 sample map as optional context for prompt interpretation
 - [ ] Add a lock-free modulation queue with timestamped breakpoints and lookahead
 - [ ] Run inference on a worker, including network requests if a hosted model is used; keep local modulation running when a response is late
 
 See the [development roadmap](docs/roadmap.md) for existing layer status.
 
-### After Step 9: learning and proof of work
+### 6. Neural audio and embedded systems
 
-All entries below are **planned**. Step numbers describe delivery increments;
-they do not renumber the existing architectural layers.
+- [ ] Evaluate an optional neural audio effect against a DSP baseline (Layer 14)
+- [ ] Port a reduced granular instrument to real audio hardware (Layer 15)
+- [ ] Evaluate optional on-device audio inference and quantisation (Layer 16)
 
-| Step | Deliverable | Proof of work |
+### Learning and proof throughout the roadmap
+
+| Layers | Engineering focus | Evidence |
 |---|---|---|
-| 10 | Validate and profile the current instrument | Host/listening checks, timing report and keyboard demo |
-| 11 | General modulation sources and routing | Source plots, bounded routing tests and sound examples |
-| 12 | Grain/resampling quality | Spectral and listening comparisons with CPU/memory costs |
-| 13 | Python audio-characteristic analysis | Reproducible feature plots and versioned sample map |
-| 14 | Sample-aware granular playback | C++ parity checks and feature-guided selection demo |
-| 15 | Small audio-region classifier | Data/model cards, baselines and held-out evaluation |
-| 16 | Local C++ audio-model deployment | Python/C++ parity, resource report and fallback demo |
-| 17 | Editable promptable modulation | Prompt/policy/render comparisons and failure tests |
-| 18 | Neural audio-effect study (optional) | DSP/neural comparison and deployment verdict |
-| 19 | Reduced embedded granular instrument | Actual hardware demo, firmware and resource measurements |
-| 20 | Embedded audio inference (optional) | Quantisation comparison and on-device audio/ML evidence |
+| 0–2 | Foundations, audio data, primitives and quality | Worked maths, roundtrips, spectra and resampling comparisons |
+| 3–4 | Grain and cloud | Repeatable renders, listening and capacity/cost measurements |
+| 5–8 | Real-time engine, modulation, MIDI and interface | Timing, routing, keyboard and host/state acceptance |
+| 9–10 | Audio analysis and sample-aware playback | Feature plots, C++ parity and selection comparisons |
+| 11–12 | Audio ML and local deployment | Data/model cards, held-out metrics and C++ inference evidence |
+| 13 | Promptable modulation | Editable policies, replay and failure handling |
+| 14 | Optional neural audio effects | DSP/neural quality and real-time feasibility comparison |
+| 15–16 | Embedded audio and optional edge ML | Actual hardware playback, firmware, memory/timing and accuracy |
 
-Follow the [detailed step plan](docs/post-step-9-plan.md),
-[learning curriculum](learnings/audio-dsp-ml-curriculum.md) and
-[proof-of-work requirements](docs/proof-of-work.md). Step 10 closes the current
-acceptance gaps first. Offline study may start earlier; optional research and
-hardware branches do not block the usable core instrument.
+The [roadmap](docs/roadmap.md) is the single capability and acceptance tracker.
+Use the [curriculum](learnings/audio-dsp-ml-curriculum.md) and
+[evidence template](docs/proof-of-work.md) alongside each layer. Existing host,
+modulation and DSP quality gaps remain open; new analysis, ML and hardware
+capabilities remain planned.
+
+## Plugin design/UI
+
+An ongoing, unnumbered **wild card** for documenting the look and feel of Drizel:
+sketches, layouts, controls, interaction experiments and design decisions. Revisit
+it alongside any layer. Start in the [Plugin design/UI notebook](docs/plugin-design-ui.md).
 
 ## Proposed architecture
 
@@ -154,7 +167,9 @@ The engine reads from a shared sample buffer. A scheduler starts grain voices, e
 | Overlap-add mixer | Sum active grain outputs |
 | Output stage | Apply output gain and any future effects |
 | Modulation sources | LFOs, MIDI, and local execution of optional prompt-derived policies feeding smoothed parameters |
-| Policy interpreter | Translate a prompt into validated, editable modulation settings outside the audio thread |
+| Analysis map (planned) | Worker-prepared source features and bounded grain candidates |
+| Region classifier (planned) | Evaluated local labels with manual/DSP fallback |
+| Policy interpreter (planned) | Translate a prompt into validated, editable modulation settings outside the audio thread |
 
 The proposed model integration keeps inference off the audio thread. Accepted
 policies run locally without waiting for another model response. For policies

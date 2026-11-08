@@ -1,7 +1,6 @@
 # Proof of work and milestone evidence
 
-**Status: process and template, 8 November 2026.** This document defines future
-evidence; it does not report completed experiments or qualifications.
+**Status: process and template, 8 November 2026.** This document defines evidence for each layer; it does not report completed experiments or qualifications.
 
 ## What a milestone demonstrates
 
@@ -24,8 +23,8 @@ exist until their experiment starts; do not publish broken links to them.
 
 - `experiments/<topic>/`: runnable code, environment/setup and small fixtures.
 - `learnings/<topic>.md`: own explanation, equations, worked examples and references.
-- `docs/devlog/YYYY-MM-DD-step-N.md`: result report using the template below.
-- `docs/evidence/step-N/`: small measurement tables, plots and artifact manifests.
+- `docs/devlog/YYYY-MM-DD-layer-N.md`: result report using the template below.
+- `docs/evidence/layer-N/`: small measurement tables, plots and artifact manifests.
 - Larger recordings, datasets and weights: an explicitly identified release or
   artifact location, with checksums, access instructions and redistribution terms.
   Avoid committing large binary files by default.
@@ -37,12 +36,12 @@ substitute and the limits of the published evidence.
 
 ## Reusable report template
 
-Copy this structure into a new dated devlog when starting a step. Fill in actual
+Copy this structure into a new dated devlog when working on a layer. Fill in actual
 results; use "not run" instead of plausible numbers or implied completion.
 
 ### Question and scope
 
-- Step, problem and musician-facing behaviour:
+- Layer, actual delivery step/commit, problem and musician-facing behaviour:
 - Hypothesis and baseline:
 - Acceptance thresholds chosen before the final comparison:
 - Explicit exclusions and known limitations:
@@ -90,6 +89,14 @@ Describe the ownership/execution boundary and one meaningful alternative.
 - Board revision, wiring, memory map, stack/heap accounting and firmware hash:
 - Reference comparison tolerance, reset/overload/fallback behaviour:
 
+### Design/UI record (when applicable)
+
+The [Plugin design/UI notebook](plugin-design-ui.md) is an ongoing wild card,
+not an additional milestone. For a design change, link the question, alternatives,
+annotated before/after views, rationale and observations. Distinguish a mockup
+from an implemented interface; include host, accessibility or playback checks
+when the implementation affects them. Exploratory notes can stay lightweight.
+
 ### Share and explain
 
 - A concise demo showing the exact change, with source/sample/settings identified:
@@ -103,6 +110,6 @@ Mark study complete only after the learner can explain and modify the result.
 Mark implementation complete only after it exists and passes relevant checks.
 Mark target validation complete only with a run on that target. Keep CI build,
 listening acceptance, public packaging and hardware deployment separate.
-Update [the roadmap](roadmap.md), [the step plan](post-step-9-plan.md), the README
+Update [the roadmap](roadmap.md), the README
 and [prerequisites](../learnings/prerequisites.md) only to the extent supported by
 evidence. Historical devlogs retain their original scope and dates.

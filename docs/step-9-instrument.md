@@ -162,11 +162,12 @@ preset. Switch to Drone to check audio output without a MIDI keyboard.
 - `tests/PluginProcessorTests.cpp`: actual MIDI offsets, output gating, presets and host state.
 - `CMakeLists.txt` and `drizel.jucer`: MIDI-enabled build configuration.
 
-## Next steps
+## Continue through the roadmap
 
-Start [Step 10 in the post-Step-9 plan](post-step-9-plan.md#step-10--validate-and-measure-the-playable-instrument)
-with the outstanding acceptance checks above. Follow with general modulation,
-DSP quality, sample analysis, audio ML and optional embedded deployment. The
-[learning curriculum](../learnings/audio-dsp-ml-curriculum.md) maps theory to each
-step and the [evidence guide](proof-of-work.md) defines completion claims.
-This planning update does not change Step 9's validation results.
+Close the outstanding Layer 5 real-time and Layer 7/8 instrument/host checks above,
+complete Layer 6 general modulation and the Layer 2 sound-quality experiments.
+The [integrated roadmap](roadmap.md) then continues through analysis, sample-aware
+playback, audio ML, promptable control and embedded audio as Layers 9–16.
+Use the [curriculum](../learnings/audio-dsp-ml-curriculum.md) and
+[evidence template](proof-of-work.md) at each layer. This planning update does
+not change Step 9's recorded validation results.
