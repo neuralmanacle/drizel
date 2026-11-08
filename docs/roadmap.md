@@ -1,8 +1,12 @@
 # Development Roadmap
 
-This roadmap builds Drizel from the bottom up. Each layer depends only on the layers beneath it, and each ends with a concrete, testable result before the next begins. Nothing in a higher layer is started until the exit criteria of the layer below are met.
+This roadmap records architectural layers and their verified implementation
+status. The delivery sequence after Step 9 is defined in the
+[post-Step-9 plan](post-step-9-plan.md). Offline study can proceed independently;
+live integration waits for the relevant lower-layer reliability and ownership
+criteria. Existing unchecked items remain open even where later UI work exists.
 
-> **Status — 5 November 2026:** Step 9 combines Layer 7 MIDI instrument
+> **Status — 8 November 2026:** Step 9 is merged into `main` and combines Layer 7 MIDI instrument
 > behaviour with Layer 8 interface/preset and packaging work. See the
 > [Step 9 guide](step-9-instrument.md) for the implementation and acceptance
 > checklist. The first offline WAV milestone remains recorded in the
@@ -18,6 +22,31 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 - **Experiments** (`experiments/`) come before production code (`src/`). Prototype an idea, record what was learned, then implement it properly.
 - **Mapping to the README:** Layers 0-3 correspond to *Core DSP*, Layers 4-5 to *Real-time engine*, Layers 6-8 to *Instrument and interface*, and Layer 9 to *AI-assisted modulation*.
 
+## Delivery steps after Step 9
+
+The [detailed plan](post-step-9-plan.md) is the canonical scope/acceptance tracker
+for Steps 10–20. This index does not claim any new implementation or completed
+study. The [curriculum](../learnings/audio-dsp-ml-curriculum.md) supplies theory;
+[proof of work](proof-of-work.md) defines the evidence required to update status.
+
+| Step | Planned outcome | Dependency |
+|---|---|---|
+| 10 | Host/listening validation and measured real-time baseline | Step 9 implementation |
+| 11 | Complete general modulation | Step 10 baseline; Layer 6 |
+| 12 | Grain windows, filtering and resampling quality | Step 10 baseline; Layer 2 gaps |
+| 13 | Python audio analysis and versioned sample maps | DSP study; Layer 9.2 |
+| 14 | C++ analysis and sample-aware grain selection | Steps 11–13 |
+| 15 | DSP/simple-model versus neural region classifier | Step 13 dataset and Step 14 baseline |
+| 16 | Local C++ inference with parity and fallback | Steps 14–15 |
+| 17 | Validated, editable promptable policies | Steps 10–11; Step 14 for analysis-aware prompts |
+| 18 | Optional neural audio-effect study | Steps 12, 15–16 |
+| 19 | Reduced engine on real embedded audio hardware | Steps 10–12 and a device feasibility study |
+| 20 | Optional embedded model inference | Steps 15–16 and 19 |
+
+These steps extend the original layers rather than renumbering them. Step 17
+implements Layer 9; Step 9 delivered MIDI/interface work. Steps 13–16 do not
+require a language model. Step 19 does not require Steps 17–18.
+
 ## Guiding rules
 
 1. **Offline first, real-time second.** Prove each algorithm by rendering to a file before running it in a live audio callback.
@@ -25,6 +54,9 @@ This roadmap builds Drizel from the bottom up. Each layer depends only on the la
 3. **Keep the audio thread clean.** No allocation, locks, file I/O, logging, or network calls inside the audio callback. This rule applies from the first real-time code onward.
 4. **Separate DSP from the framework.** Core engine code should depend on the standard library, not on JUCE types, wherever practical. JUCE wraps the engine; it does not contain it.
 5. **Write down decisions.** Record each non-obvious choice in `docs/` with the reasoning and the alternatives considered.
+6. **Earn claims with evidence.** Keep learner understanding, code, CI builds, listening, target performance and release acceptance separate. Every new step produces a reproducible experiment and result report.
+7. **Compare before adding ML.** Keep DSP/simple learned baselines, split audio data by source recording, measure held-out results and deployment cost, and retain a useful manual/DSP fallback.
+8. **Choose hardware from a budget.** Estimate sample, buffer, model and activation memory and execution cost before selecting an embedded target. A cross-build is not proof of working hardware audio.
 
 ---
 
@@ -305,7 +337,10 @@ remain open; Layer 2 is not complete.
 intent into an editable policy, and execute the accepted behaviour locally.
 Model inference stays outside the audio callback.
 
-**Prerequisite:** Layers 5 and 6 are complete. The engine already accepts smoothed, timestamped parameter changes.
+**Required before integration:** complete the relevant Layer 5 validation and
+Layer 6 interfaces, then implement/test the timestamped policy handoff below.
+These prerequisites are not yet complete. Delivery is planned as Step 17;
+sample analysis begins independently in Steps 13–14.
 
 The first target is grain scan position. Example prompts are "very chaotic",
 "go around in circles", and "one step forward two step back". These map to
@@ -324,6 +359,11 @@ has been selected, and the core instrument remains independent of that choice.
 - [ ] Compare hosted and local models for quality, latency, and licensing fit
 
 ### 9.2 Sample analysis
+
+Steps 13–14 establish the DSP analysis reference and sample-aware playback;
+Steps 15–16 evaluate optional learned region labels. This work also serves
+manual controls and does not depend on prompt interpretation.
+
 - [ ] Offline analysis of onsets, loudness, silence, and spectral features
 - [ ] Convert the analysis into a labelled map of regions for the model to reference
 
@@ -355,20 +395,20 @@ has been selected, and the core instrument remains independent of that choice.
 
 ## Dependency summary
 
-```
-Layer 0  Foundations
-   └─ Layer 1  Audio data and file I/O
-        └─ Layer 2  Signal primitives (windows, interpolation)
-             └─ Layer 3  Single grain
-                  └─ Layer 4  Many grains (scheduler, mixer)
-                       └─ Layer 5  Real-time engine
-                            └─ Layer 6  Modulation system
-                                 ├─ Layer 7  MIDI and instrument behaviour
-                                 │    └─ Layer 8  Interface and packaging
-                                 └─ Layer 9  AI-assisted modulation (experimental)
-```
+| Capability | Required foundation |
+|---|---|
+| Audio I/O, primitives, grain and cloud (Layers 1–4) | Foundations and the preceding DSP components |
+| Real-time engine (Layer 5) | Prepared audio and bounded cloud rendering |
+| General modulation (Layer 6) | Real-time engine with defined control/ownership rules |
+| MIDI and interface (Layers 7–8) | Engine and the applicable modulation controls; Step 9 implementation exists |
+| Promptable policies (Layer 9 / Step 17) | Validated engine, general modulation and tested local policy executor |
+| Analysis and audio ML (Steps 13–16) | DSP reference, sample maps and a measured selection baseline |
+| Embedded audio (Step 19) | Portable core plus a target-specific resource/audio study |
+| Embedded ML (Step 20) | Evaluated model and stable embedded audio |
 
-Layers 7 and 9 both depend only on Layer 6, so they can proceed in either order or in parallel. The suggested order is Layer 7 first, because a playable instrument gives the AI studies something real to control.
+The recommended next implementation work is Step 10 acceptance and measurement,
+then Step 11 modulation and Step 12 quality. Consult the detailed plan for
+independent offline studies and optional branches.
 
 ## Checkpoints
 

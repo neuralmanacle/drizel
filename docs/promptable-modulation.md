@@ -1,8 +1,13 @@
 # Promptable modulation policies
 
-**Status:** Research proposal, added 10 October 2026. No prompt interpreter,
-model integration, or policy executor is implemented yet. Integration belongs
-to [Layer 9 of the roadmap](roadmap.md#layer-9-promptable-modulation-policies-experimental).
+**Status: research proposal; planning updated 8 November 2026.** No prompt
+interpreter, model integration or policy executor is implemented yet. Integration
+belongs to [Layer 9](roadmap.md#layer-9-promptable-modulation-policies-experimental)
+and delivery [Step 17](post-step-9-plan.md#step-17--add-editable-promptable-modulation).
+Step 9 delivered MIDI/interface work, not this feature. Steps 13–14 first study
+sample characteristics and sample-aware selection; Steps 15–16 optionally add
+learned labels. Audio-region classification and prompt interpretation are
+separate tasks with separate evaluation.
 
 ## The project idea
 
@@ -144,8 +149,18 @@ and spread, or providing sample analysis as context. These remain experiments.
 
 ## Relationship to the current milestone
 
-The implemented WAV loader supplies the decoded source audio this feature would
-eventually explore. The next implementation work remains windows and
-interpolation, then one grain, scheduling, a real-time engine, and general
-modulation. The [10 October development log](devlog/2026-10-10.md) records the
-current boundary between working code and this proposed direction.
+Step 9 provides a playable shared-cloud MIDI instrument, presets and an editor;
+see the [instrument guide](step-9-instrument.md). Host listening/performance
+acceptance and general modulation are still incomplete. Step 10 validates the
+baseline and Step 11 completes the routing foundation before policy integration.
+The [10 October development log](devlog/2026-10-10.md) remains a historical record
+of the earlier WAV milestone, not the current implementation boundary.
+
+A sample map from Steps 13–14 could support a request such as "move through the
+sustained parts, then become brighter". Such requests need measured region
+selection and clear fallback when no region matches. The first three movement
+prompts remain the minimum scope; sample semantics must not prevent them from
+working. Step 16's audio classifier is optional context, not the language model.
+
+Use the [evidence requirements](proof-of-work.md) to report prompt validity,
+latency, manual-control comparisons, reproducibility and failure behaviour.
