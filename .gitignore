@@ -9,3 +9,4 @@ xcuserdata/
 *.component
 *.aaxplugin
 JuceLibraryCode/
+__pycache__/
