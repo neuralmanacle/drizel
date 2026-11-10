@@ -1,7 +1,7 @@
 # Offline sample analysis
 
-Step 10 builds the first Layer 9 reference. The experiment asks whether measured
-level, spectral change and spectral shape line up with known events in a WAV.
+Step 10 builds the Layer 9 reference. The experiment asks whether measured
+level, spectral change, spectral shape and periodicity line up with known events in a WAV.
 It runs as a Python command independently of the C++ build.
 
 ## Run it
@@ -91,9 +91,37 @@ white noise from 1.25 to 1.75 s, and silence elsewhere. See the
 [Step 10 devlog](../../docs/devlog/2026-11-09-step-10-sample-analysis.md)
 for measured values and tolerances.
 
-For the guitar case study, use a recording you have permission to analyze and
-keep a source note with the recording and redistribution terms. Mark a pick
-attack, steady tail and quiet gap by listening, then compare them with the plotted
-features and source intervals. Add a chord or muted scrape to see where the
-measurements overlap. Pitch confidence and the annotated recording set are
-tracked in the [Layer 9 roadmap](../../docs/roadmap.md#layer-9-audio-characteristics-and-sample-analysis).
+## Run the annotated recording study
+
+The [corpus manifest](corpus/manifest.json) records the creator, source and
+rights for each WAV, the exact bytes used in the study, and half-open regions in
+source samples. It includes a guitar note, a guitar chord, a tenor sax note,
+claves with a quiet tail, a rain field recording and the generated fixture.
+
+```sh
+python experiments/sample-analysis/study.py > build/sample-analysis-study.json
+python experiments/sample-analysis/analyze.py \
+    experiments/sample-analysis/corpus/guitar-e2.wav build/sample-analysis-e2 --plot
+```
+
+The study checks each SHA-256, measures regional feature summaries, compares
+annotated attacks with local onset peaks, and sweeps pitch confidence thresholds.
+Pitch uses 80 ms windows and is reported separately from `sample-map.json`.
+See the [measured results](../../docs/devlog/2026-11-09-step-10-sample-analysis.md#annotated-recording-study)
+for the pitch method, reference notes and failure cases.
+
+### Use your local guitar WAV
+
+Use the waveform or your existing plot to mark a clean single-note region, a
+chord or a quiet tail. Convert each time to a sample index with
+`round(seconds * sample_rate_hz)` using the rate from your sample map. Choose
+regions longer than 100 ms so both analyses have complete windows. Copy the
+manifest structure into a local folder such as `build/guitar-study/`, and add one
+entry with `file` (relative to that manifest), `sha256` (from your sample map),
+and your `regions`. Set `expected_f0_hz` for a single note whose pitch you know
+independently, and optionally set `attack_sample` on the recording entry.
+
+```sh
+python experiments/sample-analysis/study.py --manifest build/guitar-study/manifest.json \
+    > build/guitar-study/report.json
+```

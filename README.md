@@ -21,7 +21,7 @@ modulation policy. Grain scanning is the first proposed use case.
 > mode preserves continuous textures. See the [Step 9 guide](docs/step-9-instrument.md)
 > for building, playing and the outstanding host/release acceptance checks.
 > Step 10 adds [offline WAV analysis](experiments/sample-analysis/README.md)
-> with feature plots and a versioned sample map (Layer 9).
+> with feature plots, a versioned sample map and an annotated recording study (Layer 9).
 
 ## About
 
@@ -110,7 +110,8 @@ scope, example interpretations, execution design, and experiments still needed.
 ### 4. Audio analysis and ML
 
 - [x] Produce and verify an offline sample map on known signals (Layer 9)
-- [ ] Validate the analysis on annotated recordings and verify Python/C++ feature agreement (Layers 9–10)
+- [x] Validate the offline analysis on annotated recordings (Layer 9)
+- [ ] Verify Python/C++ feature agreement (Layer 10)
 - [ ] Add feature-guided grain selection with manual fallback (Layer 10)
 - [ ] Compare DSP/simple-model and neural region classification on held-out recordings (Layer 11)
 - [ ] Deploy a useful model in local C++ with measured cost and recovery (Layer 12)
@@ -288,4 +289,6 @@ Drizel is licensed under the GNU Affero General Public License,
 version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
+The third-party WAV excerpts carry the terms listed in the
+[corpus manifest](experiments/sample-analysis/corpus/manifest.json).
 

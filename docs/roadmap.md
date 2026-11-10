@@ -6,7 +6,7 @@ each layer connects theory, an experiment, implementation, validation and proof
 of work. Study can proceed offline while integration waits for its prerequisites.
 
 > **9 November 2026** — Step 9's MIDI, interface and preset work (Layers 7–8) is
-> merged into `main`. Step 10 introduces the offline Layer 9 sample map. Earlier
+> merged into `main`. Step 10 delivers the offline Layer 9 sample map and study. Earlier
 > DSP, modulation and host acceptance checks and Layers 10–16 are still open.
 
 ## How to read this roadmap
@@ -443,7 +443,7 @@ Ongoing visual and interaction studies live in the unnumbered
 
 **Step 10** implements the [offline reference](../experiments/sample-analysis/README.md).
 See the [devlog](devlog/2026-11-09-step-10-sample-analysis.md) for synthetic-signal
-checks. The annotated recording set and pitch study are pending.
+checks, the annotated recording comparison and the pitch-confidence study.
 
 **Goal:** Describe a source recording through reproducible, time-aligned measurements.
 
@@ -456,18 +456,18 @@ RMS, onset strength, centroid, flatness, autocorrelation and pitch confidence.
 
 - [x] Establish a small reproducible Python environment with recorded versions
   and a CLI or script entry point; a notebook may supplement that entry point.
-- [ ] Assemble a rights-documented set of guitar, saxophone/voice where available,
+- [x] Assemble a rights-documented set of guitar, saxophone/voice where available,
   percussion, noise, silence and field recordings. Include synthetic fixtures.
 - [x] Generate waveform/spectrogram plots and time-aligned RMS, onset, centroid
   and flatness tracks.
-- [ ] Study pitch confidence on suitable monophonic regions.
+- [x] Study pitch confidence on suitable monophonic regions.
 - [x] Specify channel/downmix policy, source sample rate, FFT/window/hop,
   centering/padding, feature units, time origin and silence handling. RMS is an
   energy measure; perceptual loudness needs a separately defined method.
 - [x] Export a versioned map with source identity/hash, analysis settings,
   source intervals, feature values and explicit unavailable values.
 - [x] Compare measurements against known tones, impulses, noise and silence.
-- [ ] Compare measurements against annotated recordings and explain failures
+- [x] Compare measurements against annotated recordings and explain failures
   on chords, noise and quiet passages.
 
 **Proof of work:** runnable analysis, example map, annotated guitar case study and plots
@@ -783,7 +783,7 @@ can start from the portable core without Layers 11–14. Layers 14 and 16 are op
 
 Close the existing Layer 5/7/8 acceptance gaps, finish Layer 6 routing and run
 Layer 2 quality experiments before integrating live analysis or inference.
-The offline Layer 9 sample map provides the reference for the annotated recordings,
+The offline Layer 9 sample map and annotated recordings provide references for
 Layer 10 selection and Layer 11 baseline/model comparison.
 
 ## Checkpoints
