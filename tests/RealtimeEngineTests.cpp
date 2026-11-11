@@ -18,6 +18,9 @@ void* operator new(std::size_t size)
     if (auto* memory = std::malloc(size == 0 ? 1 : size)) return memory;
     throw std::bad_alloc();
 }
+#if defined(__GNUC__)
+__attribute__((noinline))
+#endif
 void operator delete(void* memory) noexcept
 {
     if (audioThread) std::abort();
