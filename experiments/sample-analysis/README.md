@@ -2,7 +2,10 @@
 
 Step 10 builds the Layer 9 reference. The experiment asks whether measured
 level, spectral change, spectral shape and periodicity line up with known events in a WAV.
-It runs as a Python command independently of the C++ build.
+It runs as a Python command independently of the C++ build. [Step 11](../../docs/devlog/2026-11-11-step-11-sample-aware-playback.md)
+uses these measurements as the numerical reference for its C++ playback path.
+The plugin builds its own tables from the WAV. This tool still produces the
+versioned JSON map, flatness measurements and plots for offline study.
 
 ## Run it
 

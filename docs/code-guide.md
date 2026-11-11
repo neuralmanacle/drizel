@@ -1,9 +1,8 @@
 # Reading the current code
 
-**Updated 8 November 2026 for the merged Step 9 implementation.** The plugin is
-a playable shared-cloud MIDI instrument, not the original silent JUCE scaffold.
-Audio analysis, model inference, general modulation and embedded deployment are
-planned work; see the [roadmap](roadmap.md).
+**Updated 11 November 2026 for Step 11.** The shared-cloud MIDI instrument now
+uses WAV analysis to guide grain starts. See the [roadmap](roadmap.md) for
+remaining host validation, general modulation, ML and embedded work.
 
 ## Reading order
 
@@ -13,19 +12,20 @@ planned work; see the [roadmap](roadmap.md).
 | 2 | [WAV API](../src/io/WavFile.h) and [implementation](../src/io/WavFile.cpp) | Offline codec ownership, validation and read/write errors |
 | 3 | [Window](../src/audio/Window.h) and [Interpolation](../src/audio/Interpolation.h) | Hann tables, fractional reads and source boundary handling |
 | 4 | [Grain](../src/audio/Grain.h) | Playback position/rate, age, window, gain and pan |
-| 5 | [GrainCloud](../src/audio/GrainCloud.h) | Fixed voice capacity, scheduling, seeded variation and overlap-add |
-| 6 | [RealtimeEngine](../src/audio/RealtimeEngine.h) | Prepared samples, active/pending/retired handoff, smoothing and output safety |
-| 7 | [Modulation](../src/audio/Modulation.h) | Sine/triangle LFO and current single position/pitch route |
-| 8 | [MidiInstrument](../src/audio/MidiInstrument.h) | Held-key priority, amplitude envelope, bend and controller overrides |
-| 9 | [Processor header](../src/PluginProcessor.h) and [implementation](../src/PluginProcessor.cpp) | Loader worker, parameter snapshots, timestamped MIDI, render path, presets/state |
-| 10 | [Editor header](../src/PluginEditor.h) and [implementation](../src/PluginEditor.cpp) | Parameter attachments, waveform, telemetry, file loading and preset controls |
-| 11 | [CMake](../CMakeLists.txt), [Projucer project](../drizel.jucer) and [CI](../.github/workflows/offline-audio.yml) | Core/offline targets, optional plugin build, dependencies and validation scope |
+| 5 | [SampleFeatures](../src/audio/SampleFeatures.h) and [SampleSelection](../src/audio/SampleSelection.h) | Centered FFT frames, feature weights, regional candidate tables and launch lookup |
+| 6 | [GrainCloud](../src/audio/GrainCloud.h) | Fixed voice capacity, scheduling, seeded variation and overlap-add |
+| 7 | [RealtimeEngine](../src/audio/RealtimeEngine.h) | Prepared samples, active/pending/retired handoff, smoothing and output safety |
+| 8 | [Modulation](../src/audio/Modulation.h) | Sine/triangle LFO and current single position/pitch route |
+| 9 | [MidiInstrument](../src/audio/MidiInstrument.h) | Held-key priority, amplitude envelope, bend and controller overrides |
+| 10 | [Processor header](../src/PluginProcessor.h) and [implementation](../src/PluginProcessor.cpp) | Loader worker, parameter snapshots, timestamped MIDI, render path, presets/state |
+| 11 | [Editor header](../src/PluginEditor.h) and [implementation](../src/PluginEditor.cpp) | Parameter attachments, waveform, telemetry, file loading and preset controls |
+| 12 | [CMake](../CMakeLists.txt), [Projucer project](../drizel.jucer) and [CI](../.github/workflows/offline-audio.yml) | Core/offline targets, optional plugin build, dependencies and validation scope |
 
 Start with public contracts, then trace one real execution path. Comments that
 refer to a file's original implementation step explain that local scope; use the
 current [roadmap](roadmap.md) and [Step 9 guide](step-9-instrument.md) for status.
 
-## Trace three execution paths
+## Trace the execution paths
 
 ### Offline rendering
 
@@ -37,11 +37,16 @@ reference renders and a place for experiments before live integration.
 
 ### Live playback and sample replacement
 
-A loader worker prepares audio and cloud state. The engine owns active, pending
-and retired packets through a defined handoff; callback processing does not
-load/decode files or destroy sample storage. Trace replacement, stale output-rate
-rejection and worker reclamation in `RealtimeEngine.h` alongside the processor.
-An atomic pointer alone is not a lifetime or real-time-safety proof.
+The loader prepares audio, grain windows and selection tables in one packet.
+Trace cancellation, revision and rate checks, and active/pending/retired ownership
+in `RealtimeEngine.h` alongside the processor. The loader reclaims retired packets.
+
+### Guided grain launches
+
+Follow the block snapshot of `grainSelection` through `RealtimeEngine::next` to
+`GrainCloud::launch`. Position selects a region of the table, and a seeded draw
+chooses a weighted candidate. Empty tables return the original Manual position.
+See the [Step 11 devlog](devlog/2026-11-11-step-11-sample-aware-playback.md) for feature equations and measured results.
 
 ### MIDI and state
 
@@ -64,7 +69,7 @@ serialised; current preset recall is not sample-identical render reproduction.
 | Host audio/MIDI buffers | How long are borrowed pointers/bytes valid? |
 | Parameters and UI telemetry | What is atomic or snapshotted, and what is audio-thread state? |
 | Editor and processor | Why must audio work continue when the editor closes? |
-| Future analysis/model output | How will source identity, cancellation and reclamation be handled? |
+| Candidate tables | How does packet ownership keep the table and decoded source paired through cancellation and replacement? |
 
 `const` restricts writes through an interface; it does not make concurrent writes
 elsewhere safe. RAII destruction can perform work, so choose the destruction
@@ -81,10 +86,9 @@ Read [audio-data tests](../tests/AudioDataTests.cpp),
 [MIDI tests](../tests/MidiInstrumentTests.cpp) and
 [processor tests](../tests/PluginProcessorTests.cpp).
 
-Root CMake registers the relevant executables with CTest. The Step 9 verification
-log reports 11 entries in the plugin-enabled configuration; actual discovery
-with `ctest --test-dir <build> -N` depends on the selected build configuration.
-See the [Step 9 verification log](devlog/2026-11-05-step-9.md) for recorded results.
+Root CMake registers the relevant executables with CTest. Use
+`ctest --test-dir <build> -N` to list tests for your build configuration.
+The [Step 11 verification](devlog/2026-11-11-step-11-sample-aware-playback.md#what-the-checks-showed) records 11 CTest entries, 13 Python tests and the guided-path measurements.
 A numerical test, successful CI build or validator run does not substitute for
 listening, primary-machine host acceptance or measured callback headroom.
 
@@ -93,12 +97,12 @@ listening, primary-machine host acceptance or measured callback headroom.
 | Layer | Starting point | Planned or remaining work |
 |---|---|---|
 | 2 | Windows, interpolation and grain reader | Measured filtering/resampling quality |
-| 5 | Existing tests, processor and engine | Timing and host/listening evidence |
-| 6 | Modulation and smoothed controls | Bounded general source/route interface |
-| 9–10 | Source buffer and loader ownership | Offline reference then worker-prepared maps and selection |
+| 6 | Existing tests, processor and engine | Timing and host/listening evidence |
+| 7 | Modulation and smoothed controls | Bounded general source/route interface |
+| 9–10 | Python analysis, C++ parity and worker-prepared selection | DAW listening and host timing during sample replacement |
 | 11–12 | Analysis feature schema | Evaluated classifier then worker-side C++ inference |
-| 13 | Layer 6 routes and local policy executor | Validated numeric policy crosses into playback |
-| 14 | Optional output-stage experiment | Audio-rate inference needs its own timing/memory audit |
+| 14 | Layer 6 routes and local policy executor | Validated numeric policy crosses into playback |
+| 15 | Optional output-stage experiment | Audio-rate inference needs its own timing/memory audit |
 | 15–16 | Framework-independent core | Hardware adapter, then optional tiny inference |
 
 Proposed source directories and experiment names in planning docs are not

@@ -5,6 +5,9 @@ Layer 8 is not complete: shipping and host validation remain open.
 
 ## Use
 
+The controls below describe the first editor increment. [Step 9](step-9-instrument.md)
+adds MIDI and presets. [Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md) adds the Grain selection menu.
+
 1. Build the Standalone or plugin using the existing CMake or Projucer route.
 2. Choose **Load WAV**, or drop one WAV onto the editor. Loading runs on the
    existing worker; a failed load leaves the previous sound and waveform intact.

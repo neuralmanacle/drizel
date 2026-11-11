@@ -47,6 +47,7 @@ acceptance remains tracked separately below.
 - Windowed grains with interpolated sample playback
 - Overlapping grain scheduling and mixing
 - Playback position and pitch modulation
+- Feature-guided grain selection with local Manual fallback
 - Real-time audio output
 - MIDI input and control
 - Graphical user interface
@@ -55,9 +56,9 @@ acceptance remains tracked separately below.
 The [Layer 9 reference](experiments/sample-analysis/README.md) measures RMS,
 onset strength, spectral centroid and flatness on the WAV's sample timeline.
 
-Planned capabilities in Layers 10–16:
+Planned capabilities in Layers 11–16:
 
-- Feature-guided grain selection, followed by an evaluated audio-region model and local C++ inference.
+- An evaluated audio-region model and local C++ inference.
 - A reduced embedded granular instrument, followed by optional on-device ML.
 - Optional promptable modulation policies (experimental): a model interprets
   descriptions of movement, and local modulation sources execute the accepted
@@ -113,8 +114,9 @@ scope, example interpretations, execution design, and experiments still needed.
 
 - [x] Produce and verify an offline sample map on known signals (Layer 9)
 - [x] Validate the offline analysis on annotated recordings (Layer 9)
-- [ ] Verify Python/C++ feature agreement (Layer 10)
-- [ ] Add feature-guided grain selection with manual fallback (Layer 10)
+- [x] Verify Python/C++ feature agreement on a shared synthetic fixture (Layer 10)
+- [x] Add feature-guided grain selection with manual fallback (Layer 10)
+- [ ] Validate guided selection by ear and measure callback timing during WAV replacement in a DAW (Layer 10)
 - [ ] Compare DSP/simple-model and neural region classification on held-out recordings (Layer 11)
 - [ ] Deploy a useful model in local C++ with measured cost and recovery (Layer 12)
 
@@ -154,7 +156,7 @@ The [roadmap](docs/roadmap.md) is the single capability and acceptance tracker.
 Use the [curriculum](learnings/audio-dsp-ml-curriculum.md) and
 [evidence template](docs/proof-of-work.md) alongside each layer. Existing host,
 modulation and DSP quality checks remain open. The roadmap tracks the remaining
-analysis validation, sample-aware playback, ML and hardware work.
+DAW acceptance for sample-aware playback, ML and hardware work.
 
 ## Plugin design/UI
 

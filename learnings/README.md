@@ -21,7 +21,7 @@ a working feature does not automatically establish personal understanding.
 | 0–2 | C++, ownership, sampled audio, maths, windows, filtering and resampling |
 | 3–4 | Grain rendering, scheduling, mixing and bounded voice state |
 | 5–8 | Timing, concurrency, modulation, MIDI, UI, presets and host acceptance |
-| 9–10 | Python, signal characteristics, C++ analysis and sample-aware selection |
+| 9–10 | [Python sample analysis](../experiments/sample-analysis/README.md) and [C++ guided grain selection](../docs/devlog/2026-11-11-step-11-sample-aware-playback.md) |
 | 11–12 | Dataset design, baselines, neural training, evaluation and C++ inference |
 | 13 | Validated language policies, preview and deterministic execution |
 | 14, optional | Causal neural effects and real-time feasibility |
