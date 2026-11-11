@@ -1,5 +1,6 @@
 #pragma once // One definition per translation unit.
 
+#include "SampleSelection.h"
 #include "Grain.h" // Reuse the tested single-grain state and interpolation.
 #include "Window.h" // Allocate Hann tables during preparation only.
 #include <algorithm> // min, max and clamp express parameter bounds.
@@ -83,6 +84,7 @@ public:
         if (peak > 1.0e30)
             throw std::invalid_argument("Source amplitude exceeds supported range");
         settings_ = s; // Snapshot parameters; no concurrent live control yet.
+        selectionRandom_ = s.seed;
         random_ = s.seed; // Re-preparing with the same seed restarts the sequence.
         interval_ = s.outputRate / s.density; // Fractional frames are preserved.
         if (!std::isfinite(interval_))
@@ -121,13 +123,14 @@ public:
         }
     }
 
-    GrainFrame next(bool trigger = true) noexcept // One stereo output frame.
+    GrainFrame next(bool trigger = true, const SampleSelection* selection = nullptr,
+                    GrainSelection mode = GrainSelection::manual) noexcept // One stereo output frame.
     {
         if (source_ == nullptr)
             return {}; // Safe before prepare or after a failed prepare.
         if (trigger && countdown_ <= 0.0) // At most one trigger per output frame.
         {
-            launch(); // Try a free slot; a full pool drops the new grain.
+            launch(selection, mode); // Try a free slot; a full pool drops the new grain.
             countdown_ += std::max(1.0, interval_ * (1.0 + settings_.jitter * bipolar()));
         } // Addition keeps fractional timing error instead of rounding each hop.
         if (trigger)
@@ -160,11 +163,17 @@ private:
         return static_cast<double>(random_) / 4294967296.0; // Uniform grid in [0,1).
     }
     double bipolar() noexcept { return 2.0 * unit() - 1.0; } // Map to [-1,1).
-    void launch() noexcept
+    void launch(const SampleSelection* selection, GrainSelection mode) noexcept
     {
         const auto choice = static_cast<std::size_t>(unit() * 3.0); // Three lengths.
-        const double position = std::clamp(settings_.position + settings_.positionSpread * bipolar(),
+        double position = std::clamp(settings_.position + settings_.positionSpread * bipolar(),
             0.0, static_cast<double>(source_->frameCount() - 1)); // Clamp starts only.
+        if (selection != nullptr && mode != GrainSelection::manual)
+        {
+            // Independent of the draws for pan, pitch, length and scheduler jitter.
+            selectionRandom_ = selectionRandom_ * 1664525u + 1013904223u;
+            position = selection->start(mode, position, selectionRandom_ / 4294967296.0);
+        }
         const double pitch = settings_.semitones + settings_.pitchSpread * bipolar();
         const float pan = static_cast<float>(std::clamp(settings_.pan + settings_.panSpread * bipolar(), -1.0, 1.0));
         const double rate = std::pow(2.0, pitch / 12.0) * source_->sampleRate() / settings_.outputRate;
@@ -188,6 +197,7 @@ private:
     double interval_ = 1.0; // Nominal frames between triggers.
     double countdown_ = 0.0; // Fractional time until the next trigger.
     float grainGain_ = 0.0f; // Fixed gain avoids active-count-driven pumping.
+    std::uint32_t selectionRandom_ = 1;
     std::uint32_t random_ = 1; // Reproducible random state.
     std::size_t started_ = 0, dropped_ = 0, maximumActive_ = 0; // Offline diagnostics.
 };

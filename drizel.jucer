@@ -29,6 +29,8 @@
         <FILE id="Rt2" name="RealtimeEngine.h" compile="0" resrc="0" file="src/audio/RealtimeEngine.h" />
         <FILE id="DrzMod7" name="Modulation.h" compile="0" resrc="0" file="src/audio/Modulation.h" />
 
+        <FILE id="DrzSft" name="SampleFeatures.h" compile="0" resrc="0" file="src/audio/SampleFeatures.h" />
+        <FILE id="DrzSse" name="SampleSelection.h" compile="0" resrc="0" file="src/audio/SampleSelection.h" />
         <FILE id="DrzWin" name="Window.h" compile="0" resrc="0" file="src/audio/Window.h" />
         <FILE id="DrzInt" name="Interpolation.h" compile="0" resrc="0" file="src/audio/Interpolation.h" />
         <FILE id="D7fd6c" name="SampleBuffer.h" compile="0" resrc="0" file="src/audio/SampleBuffer.h" />

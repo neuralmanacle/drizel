@@ -22,6 +22,8 @@ modulation policy. Grain scanning is the first proposed use case.
 > for building, playing and the outstanding host/release acceptance checks.
 > Step 10 adds [offline WAV analysis](experiments/sample-analysis/README.md)
 > with feature plots, a versioned sample map and an annotated recording study (Layer 9).
+> [Step 11](docs/devlog/2026-11-11-step-11-sample-aware-playback.md) brings that analysis
+> into playback with Attack, Sustain, Avoid silence and Bright grain selection (Layer 10).
 
 ## About
 

@@ -47,19 +47,32 @@ int main()
         check(audio.getMagnitude(47, 17) == 0, "release returns to exact silence");
         check(midi.isEmpty(), "MIDI input consumed");
         set(p, "position", 0.35f); set(p, "rootNote", 48); set(p, "lfoDepth", 0.7f);
+        set(p, "grainSelection", 4);
         const auto preset = directory.getChildFile("patch.drizel");
         check(p.savePreset(preset), "preset write");
+        set(p, "grainSelection", 0);
         set(p, "position", 0.8f); set(p, "rootNote", 60);
         check(p.loadPreset(preset), "preset read");
         check(std::abs(p.parameters.getRawParameterValue("position")->load() - 0.35f) < 1e-5f,
               "preset restores parameter");
         check(p.parameters.getRawParameterValue("rootNote")->load() == 48, "preset restores MIDI setting");
+        check(p.parameters.getRawParameterValue("grainSelection")->load() == 4,
+              "preset restores guided selection");
         juce::MemoryBlock state;
         p.getStateInformation(state);
         set(p, "lfoDepth", 0);
         p.setStateInformation(state.getData(), static_cast<int>(state.getSize()));
         check(std::abs(p.parameters.getRawParameterValue("lfoDepth")->load() - 0.7f) < 1e-5f,
               "host state restores modulation");
+        const auto legacyPreset = directory.getChildFile("legacy.drizel");
+        auto legacyState = p.parameters.copyState();
+        legacyState.removeChild(legacyState.getChildWithProperty("id", "grainSelection"), nullptr);
+        juce::MemoryBlock legacyData;
+        juce::AudioProcessor::copyXmlToBinary(*legacyState.createXml(), legacyData);
+        check(legacyPreset.replaceWithData(legacyData.getData(), legacyData.getSize()), "write legacy preset");
+        check(p.loadPreset(legacyPreset), "legacy preset loads");
+        check(p.parameters.getRawParameterValue("grainSelection")->load() == 0,
+              "legacy state restores manual selection");
         const auto invalid = directory.getChildFile("invalid.drizel");
         invalid.replaceWithText("invalid");
         check(!p.loadPreset(invalid), "invalid preset rejected");

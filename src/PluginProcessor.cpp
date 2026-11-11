@@ -18,6 +18,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"attack", 1}, "Attack (seconds)", 0.001f, 2.0f, 0.01f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"release", 1}, "Release (seconds)", 0.005f, 5.0f, 0.2f));
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID{"rootNote", 1}, "Root MIDI note", 0, 127, 60));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"grainSelection", 2},
+        "Grain selection", juce::StringArray{"Manual", "Attack", "Sustain", "Avoid silence", "Bright"}, 0));
     return layout; // Construction and allocations occur before playback.
 }
 
@@ -27,6 +29,7 @@ DrizelAudioProcessor::DrizelAudioProcessor()
 {
     static_assert(std::atomic<float>::is_always_lock_free, "Parameters must be lock-free");
     static_assert(std::atomic<int>::is_always_lock_free, "Telemetry must be lock-free");
+    selectionMode = parameters.getRawParameterValue("grainSelection");
     position = parameters.getRawParameterValue("position");
     pitch = parameters.getRawParameterValue("pitch");
     density = parameters.getRawParameterValue("density");
@@ -56,7 +59,7 @@ void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
     requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
-    ++revision;
+    engine.expectRevision(++revision);
     notify();
 }
 bool DrizelAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -85,6 +88,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const int root = static_cast<int>(rootNote->load());
     auto event = midi.cbegin();
     const auto eventEnd = midi.cend();
+    const auto selection = static_cast<drizel::GrainSelection>(static_cast<int>(selectionMode->load()));
     const auto pos = position->load(), semitones = pitch->load(); // One atomic snapshot per block.
     const auto grains = density->load(), level = gain->load() * play->load();
     lfo.setRate(lfoRate->load());
@@ -120,7 +124,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         const auto targets = modulation.apply(useMidi ? instrument.position(pos) : pos, semitones, lfo.next());
         const auto frame = engine.next(targets.position,
             targets.pitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
-            useMidi ? instrument.density(grains) : grains, level);
+            useMidi ? instrument.density(grains) : grains, level, selection);
         // Apply the note envelope AFTER the engine's gain smoother: exact silent gate.
         const float amplitude = useMidi ? static_cast<float>(instrument.nextAmplitude()) : 1.0f;
         left[i] = amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
@@ -139,7 +143,7 @@ void DrizelAudioProcessor::requestSample(const juce::File& file)
     const juce::ScopedLock lock(requestLock);
     requestedPath = file.getFullPathName(); // No decode on the UI thread.
     status = "Loading " + file.getFileName();
-    ++revision; // Newest request wins if a previous decode is still running.
+    engine.expectRevision(++revision); // Newest request wins if a previous decode is still running.
     notify();
 }
 DrizelAudioProcessor::SampleDisplayState DrizelAudioProcessor::loadedSampleState()
@@ -175,6 +179,10 @@ void DrizelAudioProcessor::run()
                 auto sample = path.isEmpty() ? drizel::SampleBuffer(1, 1, rate)
                     : drizel::loadWav(std::filesystem::u8path(path.toStdString()));
                 auto ready = std::make_unique<drizel::PreparedSample>(std::move(sample), rate);
+                ready->revision = job;
+                if (path.isNotEmpty() && !ready->selection.prepare(ready->source, [this, job]
+                    { return threadShouldExit() || !engine.expectsRevision(job); }))
+                    continue;
                 const juce::ScopedLock lock(requestLock);
                 if (job == revision && !threadShouldExit())
                 {
@@ -214,12 +222,21 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
         if (state.hasType(parameters.state.getType()))
         {
             resetInstrument.store(true);
+            // Older states predate the selection parameter. Restore its default
+            // explicitly even if a guided mode was active before recall.
+            if (!state.getChildWithProperty("id", "grainSelection").isValid())
+            {
+                juce::ValueTree selectionState("PARAM");
+                selectionState.setProperty("id", "grainSelection", nullptr);
+                selectionState.setProperty("value", 0.0f, nullptr);
+                state.appendChild(selectionState, nullptr);
+            }
             parameters.replaceState(state); // JUCE updates the atomic parameter values.
             const auto path = state.getProperty("samplePath").toString();
             const juce::ScopedLock lock(requestLock);
             requestedPath = path; // An empty saved path also replaces the old source.
             status = path.isEmpty() ? "Load a WAV to begin" : "Restoring sample...";
-            ++revision;
+            engine.expectRevision(++revision);
             notify(); // Decode/clear remains asynchronous.
         }
     }

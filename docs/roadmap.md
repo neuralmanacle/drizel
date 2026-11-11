@@ -481,7 +481,7 @@ region maps back to the correct source interval. No plugin integration yet.
 
 ## Layer 10: Sample-aware granular playback
 
-**Status:** Planned.
+**Status:** Initial playback implementation in [Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md). DAW listening and host timing remain open.
 
 **Goal:** Let musicians bias grain selection using measured source characteristics.
 
@@ -492,14 +492,14 @@ background jobs, cache invalidation and confidence-aware UI.
 
 **Build and experiments**
 
-- [ ] Port a minimal useful feature subset to framework-independent C++; compare
+- [x] Port a minimal useful feature subset to framework-independent C++; compare
   against Layer 9 using shared fixtures and stated numerical tolerances.
-- [ ] Prepare analysis on a worker. Keep source ownership valid for the job,
+- [x] Prepare analysis on a worker. Keep source ownership valid for the job,
   reject stale results after sample/rate/settings changes and reclaim retired
   maps outside the callback, including cancellation and shutdown paths.
-- [ ] Precompute bounded region/candidate tables outside playback; avoid scanning
+- [x] Precompute bounded region/candidate tables outside playback; avoid scanning
   a whole sample or rebuilding a probability distribution for every grain.
-- [ ] Add attack/sustain preference, silence avoidance and brightness selection
+- [x] Add attack/sustain preference, silence avoidance and brightness selection
   incrementally. Define empty-candidate and low-confidence fallback to manual
   selection, seed/reset behaviour and the selected-region boundary policy.
 - [ ] Keep feature-based selection distinct from claims of semantic recognition.

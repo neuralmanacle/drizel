@@ -60,6 +60,7 @@ private:
     juce::String requestedPath, status = "Load a WAV to begin";
     double requestedRate = 0.0; // Zero until the host prepares playback.
     std::uint64_t revision = 0; // Changed path/rate invalidates in-flight work.
+    std::atomic<float>* selectionMode = nullptr;
     std::atomic<float>* position = nullptr; // Cached parameter pointers: no lookup in callback.
     std::atomic<float>* pitch = nullptr;
     std::atomic<float>* density = nullptr;
