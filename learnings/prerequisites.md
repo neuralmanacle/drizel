@@ -1,9 +1,8 @@
 # Prerequisites and learner confirmation
 
-**Planning update: 8 November 2026.** The repository contains working code through
-Step 9, but that does not verify personal mastery. The previous blanket "Not
-started" labels did not distinguish implementation from study. All study items
-below need learner confirmation; no skill is marked learned by this docs update.
+Step 9 supplies the playable instrument and Step 10 supplies the
+[offline sample analysis experiment](../experiments/sample-analysis/README.md).
+The study items below still need learner confirmation.
 Use the [curriculum](audio-dsp-ml-curriculum.md) and
 [evidence guide](../docs/proof-of-work.md) before changing a study checkbox.
 

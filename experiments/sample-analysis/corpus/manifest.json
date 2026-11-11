@@ -1,0 +1,130 @@
+{
+  "recordings": [
+    {
+      "file": "guitar-e2.wav",
+      "sha256": "753e5f75e620f33ddd9e1cd6bb13231616366dbfba7958de933885c6a78ea9cf",
+      "creator": "Roberto Gordo Saez / FreePats",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_page": "https://freepats.zenvoid.org/Guitar/acoustic-guitar.html",
+      "source_audio": "https://freepats.zenvoid.org/Guitar/SpanishClassicalGuitar/SpanishClassicalGuitar-SFZ-20190618.7z",
+      "archive_member": "SpanishClassicalGuitar-SFZ-20190618/samples/E2.wav",
+      "preparation": "First 44,100 sample frames at 44,100 Hz, saved as mono PCM16 WAV.",
+      "attack_sample": 1111,
+      "regions": [
+        {
+          "label": "Guitar E2 decay",
+          "start_sample": 5292,
+          "end_sample_exclusive": 38808,
+          "expected_f0_hz": 82.406889
+        }
+      ]
+    },
+    {
+      "file": "guitar-chord.wav",
+      "sha256": "ac5e8aea7497f16d7083fa6686c4a7ba1d66cc8c8812a6f7f1f76f8356ba75e8",
+      "creator": "AntumDeluge",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_page": "https://opengameart.org/node/16326",
+      "source_audio": "https://opengameart.org/sites/default/files/guitar-1.wav",
+      "preparation": "First 44,100 sample frames at 44,100 Hz, saved as mono PCM16 WAV.",
+      "attack_sample": 353,
+      "regions": [
+        {
+          "label": "Guitar chord",
+          "start_sample": 3528,
+          "end_sample_exclusive": 39690
+        }
+      ]
+    },
+    {
+      "file": "tenor-sax-c4.wav",
+      "sha256": "bba1eccf600a91460878bad94f2cd9733043c50fb05da434b41c042cc0234e72",
+      "creator": "Versilian Studios LLC / FreePats",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_page": "https://freepats.zenvoid.org/Reed/saxophone.html",
+      "source_audio": "https://freepats.zenvoid.org/Reed/TenorSaxophone/TenorSaxophone-small-SFZ-20200717.tar.bz2",
+      "archive_member": "TenorSaxophone-small-SFZ-20200717/samples/C4_v2.wav",
+      "preparation": "First 39,690 sample frames at 44,100 Hz, saved as mono PCM16 WAV.",
+      "regions": [
+        {
+          "label": "Tenor sax C4 sustain",
+          "start_sample": 7938,
+          "end_sample_exclusive": 37485,
+          "expected_f0_hz": 261.625565
+        }
+      ]
+    },
+    {
+      "file": "claves.wav",
+      "sha256": "08c35c099c9f992d13cf9e174f026e0ea095c559a3f0b890e29e0e0a808c69a5",
+      "creator": "Versilian Studios LLC and VCSL contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_page": "https://versilian-studios.com/vcsl/",
+      "source_audio": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Idiophones/Struck%20Idiophones/Claves/Claves1_Hit_v2_rr1_Mid.wav",
+      "preparation": "First 33,075 sample frames at 44,100 Hz, saved as stereo PCM16 WAV.",
+      "attack_sample": 379,
+      "regions": [
+        {
+          "label": "Claves decay",
+          "start_sample": 882,
+          "end_sample_exclusive": 6615
+        },
+        {
+          "label": "Quiet claves tail",
+          "start_sample": 14994,
+          "end_sample_exclusive": 30870
+        }
+      ]
+    },
+    {
+      "file": "rain.wav",
+      "sha256": "cbb99c0aec1a0a6a5126ee2ffed347e504d2e6f613872f1b29119101c55bdf4b",
+      "creator": "ジダネ",
+      "license": "Public domain (creator dedication)",
+      "license_url": "https://commons.wikimedia.org/wiki/File:Rain.ogg#Licensing",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Rain.ogg",
+      "source_audio": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Rain.ogg",
+      "preparation": "Ogg Vorbis decoded to PCM16 using FFmpeg 7.1.5. First 44,100 sample frames at 44,100 Hz, saved as mono PCM16 WAV.",
+      "regions": [
+        {
+          "label": "Rain field recording",
+          "start_sample": 8820,
+          "end_sample_exclusive": 42336
+        }
+      ]
+    },
+    {
+      "file": "fixture.wav",
+      "generated_fixture": true,
+      "sha256": "cdd12eb0af8a28c1853a97514f4305abde61807d87e01f23f18e9a0c4b16a196",
+      "creator": "Drizel",
+      "license": "AGPL-3.0-only (repository license)",
+      "license_url": "../../../LICENSE",
+      "source_page": "../fixture.py",
+      "preparation": "Deterministically generated 48 kHz mono PCM16 WAV.",
+      "attack_sample": 12000,
+      "regions": [
+        {
+          "label": "Digital silence",
+          "start_sample": 4800,
+          "end_sample_exclusive": 9600
+        },
+        {
+          "label": "750 Hz sine",
+          "start_sample": 28800,
+          "end_sample_exclusive": 43200,
+          "expected_f0_hz": 750
+        },
+        {
+          "label": "Seeded white noise",
+          "start_sample": 62400,
+          "end_sample_exclusive": 81600
+        }
+      ]
+    }
+  ]
+}

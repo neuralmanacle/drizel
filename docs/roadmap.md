@@ -5,10 +5,9 @@ into applied audio ML and embedded audio. This is the single capability roadmap:
 each layer connects theory, an experiment, implementation, validation and proof
 of work. Study can proceed offline while integration waits for its prerequisites.
 
-> **Status — 8 November 2026:** Implementation exists through the Step 9 MIDI,
-> interface and preset milestone (Layers 7–8), merged into `main`. Earlier DSP,
-> modulation and host acceptance items remain open. Layers 9–16 are planned;
-> this document does not claim completed analysis, ML or hardware deployment.
+> **9 November 2026** — Step 9's MIDI, interface and preset work (Layers 7–8) is
+> merged into `main`. Step 10 delivers the offline Layer 9 sample map and study. Earlier
+> DSP, modulation and host acceptance checks and Layers 10–16 are still open.
 
 ## How to read this roadmap
 
@@ -442,7 +441,9 @@ Ongoing visual and interaction studies live in the unnumbered
 
 ## Layer 9: Audio characteristics and sample analysis
 
-**Status:** Planned.
+**Step 10** implements the [offline reference](../experiments/sample-analysis/README.md).
+See the [devlog](devlog/2026-11-09-step-10-sample-analysis.md) for synthetic-signal
+checks, the annotated recording comparison and the pitch-confidence study.
 
 **Goal:** Describe a source recording through reproducible, time-aligned measurements.
 
@@ -453,19 +454,21 @@ RMS, onset strength, centroid, flatness, autocorrelation and pitch confidence.
 
 **Build and experiments**
 
-- [ ] Establish a small reproducible Python environment with recorded versions
+- [x] Establish a small reproducible Python environment with recorded versions
   and a CLI or script entry point; a notebook may supplement that entry point.
-- [ ] Assemble a rights-documented set of guitar, saxophone/voice where available,
+- [x] Assemble a rights-documented set of guitar, saxophone/voice where available,
   percussion, noise, silence and field recordings. Include synthetic fixtures.
-- [ ] Generate waveform/spectrogram plots and time-aligned RMS, onset, centroid
-  and flatness tracks; study pitch only for suitable monophonic regions.
-- [ ] Specify channel/downmix policy, source sample rate, FFT/window/hop,
+- [x] Generate waveform/spectrogram plots and time-aligned RMS, onset, centroid
+  and flatness tracks.
+- [x] Study pitch confidence on suitable monophonic regions.
+- [x] Specify channel/downmix policy, source sample rate, FFT/window/hop,
   centering/padding, feature units, time origin and silence handling. RMS is an
   energy measure; perceptual loudness needs a separately defined method.
-- [ ] Export a versioned map with source identity/hash, analysis settings,
-  timestamps or frame indices, feature values and unavailable/confidence flags.
-- [ ] Compare measurements against annotated events and known tones/impulses;
-  explain failures on chords, noise and quiet passages.
+- [x] Export a versioned map with source identity/hash, analysis settings,
+  source intervals, feature values and explicit unavailable values.
+- [x] Compare measurements against known tones, impulses, noise and silence.
+- [x] Compare measurements against annotated recordings and explain failures
+  on chords, noise and quiet passages.
 
 **Proof of work:** runnable analysis, example map, annotated guitar case study and plots
 that connect what is heard to what is measured. Initial feature scripts are not
@@ -778,10 +781,10 @@ every research branch in numerical order. Layer 9 analysis can be studied offlin
 Layer 13's basic movement policies need Layers 5–6 but not a classifier. Layer 15
 can start from the portable core without Layers 11–14. Layers 14 and 16 are optional.
 
-The next implementation work is to close the existing Layer 5/7/8 acceptance gaps,
-finish Layer 6 routing and run Layer 2 quality experiments. Record that evidence
-before integrating new live analysis or inference. Continue with Layer 9's sample
-map, Layer 10 selection and Layer 11's baseline/model comparison.
+Close the existing Layer 5/7/8 acceptance gaps, finish Layer 6 routing and run
+Layer 2 quality experiments before integrating live analysis or inference.
+The offline Layer 9 sample map and annotated recordings provide references for
+Layer 10 selection and Layer 11 baseline/model comparison.
 
 ## Checkpoints
 

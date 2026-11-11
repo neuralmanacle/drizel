@@ -15,11 +15,13 @@ An experimental part of the vision is **promptable modulation**: describe how
 the sound should move, then let a model translate that intention into an editable
 modulation policy. Grain scanning is the first proposed use case.
 
-> **Status — 8 November 2026:** Step 9 is merged into `main` and combines MIDI instrument behaviour
+> **9 November 2026** — Step 9 is merged into `main` and combines MIDI instrument behaviour
 > (Layer 7) with interface/preset and packaging work (Layer 8). One shared cloud
 > supports last-note priority, velocity envelopes, bend and CC control; Drone
 > mode preserves continuous textures. See the [Step 9 guide](docs/step-9-instrument.md)
 > for building, playing and the outstanding host/release acceptance checks.
+> Step 10 adds [offline WAV analysis](experiments/sample-analysis/README.md)
+> with feature plots, a versioned sample map and an annotated recording study (Layer 9).
 
 ## About
 
@@ -48,9 +50,12 @@ acceptance remains tracked separately below.
 - Graphical user interface
 - Standalone application and audio plugin builds
 
-Planned capabilities in Layers 9–16:
+The [Layer 9 reference](experiments/sample-analysis/README.md) measures RMS,
+onset strength, spectral centroid and flatness on the WAV's sample timeline.
 
-- Sample analysis and feature-guided grain selection, followed by an evaluated audio-region model and local C++ inference.
+Planned capabilities in Layers 10–16:
+
+- Feature-guided grain selection, followed by an evaluated audio-region model and local C++ inference.
 - A reduced embedded granular instrument, followed by optional on-device ML.
 - Optional promptable modulation policies (experimental): a model interprets
   descriptions of movement, and local modulation sources execute the accepted
@@ -104,7 +109,9 @@ scope, example interpretations, execution design, and experiments still needed.
 
 ### 4. Audio analysis and ML
 
-- [ ] Map sample characteristics and verify Python/C++ feature agreement (Layers 9–10)
+- [x] Produce and verify an offline sample map on known signals (Layer 9)
+- [x] Validate the offline analysis on annotated recordings (Layer 9)
+- [ ] Verify Python/C++ feature agreement (Layer 10)
 - [ ] Add feature-guided grain selection with manual fallback (Layer 10)
 - [ ] Compare DSP/simple-model and neural region classification on held-out recordings (Layer 11)
 - [ ] Deploy a useful model in local C++ with measured cost and recovery (Layer 12)
@@ -144,8 +151,8 @@ See the [development roadmap](docs/roadmap.md) for existing layer status.
 The [roadmap](docs/roadmap.md) is the single capability and acceptance tracker.
 Use the [curriculum](learnings/audio-dsp-ml-curriculum.md) and
 [evidence template](docs/proof-of-work.md) alongside each layer. Existing host,
-modulation and DSP quality gaps remain open; new analysis, ML and hardware
-capabilities remain planned.
+modulation and DSP quality checks remain open. The roadmap tracks the remaining
+analysis validation, sample-aware playback, ML and hardware work.
 
 ## Plugin design/UI
 
@@ -282,4 +289,6 @@ Drizel is licensed under the GNU Affero General Public License,
 version 3 only (AGPL-3.0-only). See [LICENSE](LICENSE).
 
 Third-party dependencies, including JUCE, retain their respective licenses.
+The third-party WAV excerpts carry the terms listed in the
+[corpus manifest](experiments/sample-analysis/corpus/manifest.json).
 
