@@ -154,9 +154,10 @@ Layer 5/7/8 checks and complete Layer 6 routing before policy integration.
 The [10 October development log](devlog/2026-10-10.md) remains a historical record
 of the earlier WAV milestone, not the current implementation boundary.
 
-A sample map from Layers 9–10 could support a request such as "move through the
-sustained parts, then become brighter". Such requests need measured region
-selection and clear fallback when no region matches. The first three movement
+[Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md) implements DSP-based sample selection with local Manual
+fallback. A future policy could use this analysis for requests such as "move
+through the sustained parts, then become brighter". Policy integration still
+needs a contract for steering selection and handling regions without candidates. The first three movement
 prompts remain the minimum scope; sample semantics must not prevent them from
 working. Layer 12's audio classifier is optional context, not the language model.
 

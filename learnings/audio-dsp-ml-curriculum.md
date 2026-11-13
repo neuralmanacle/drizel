@@ -57,8 +57,10 @@ with the Python reference using identical frame origins and padding.
 flatness versus semantic sound identity; pitch confidence on monophonic audio
 versus chords; normalised source position versus frame index and seconds.
 
-**Evidence:** versioned sample map, known-signal tests and a working sample-aware
-selection comparison. Save settings so plots can be regenerated.
+**Evidence:** start with the [Step 10 Python reference](../experiments/sample-analysis/README.md)
+and the [Step 11 C++ comparison](../docs/devlog/2026-11-11-step-11-sample-aware-playback.md). Reproduce a known-signal
+measurement, then compare Manual and a guided mode on the same recording. Save
+the WAV, mode, Position, Pitch and Density with the listening notes.
 
 ## D. ML foundations and experimental design — Layer 11
 

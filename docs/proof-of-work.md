@@ -16,6 +16,13 @@ A tutorial followed, an unchecked roadmap, a video alone or code generated
 without an explanation is not enough to substantiate the associated capability.
 A measured negative result is useful research evidence when labelled honestly.
 
+## Layer 10 evidence
+
+The [Step 11 report](devlog/2026-11-11-step-11-sample-aware-playback.md) documents feature parity, callback allocation
+checks, preset compatibility, a synthetic render comparison and core timing.
+The [Layer 10 roadmap](roadmap.md#layer-10-sample-aware-granular-playback) tracks
+DAW listening and host timing during WAV replacement.
+
 ## Evidence layout
 
 Use existing `docs/devlog/` for dated reports. Proposed locations below do not

@@ -15,7 +15,8 @@ The callback borrows host buffers and never decodes or destroys sample storage.
 
 | Current stage | Responsibility |
 |---|---|
-| Prepared source | Worker-decoded stable sample storage and prepared cloud |
+| Prepared source | Worker-decoded sample storage, candidate tables and prepared cloud in one packet |
+| Grain selection | Map smoothed Position to a source region and choose a candidate at launch, with Manual fallback |
 | Scheduler and pool | Launch grains into fixed-capacity reusable voices |
 | Grain reader and window | Interpolate source samples and shape grain amplitude |
 | Mixer and output | Sum voices, smooth controls, apply safety and MIDI amplitude gate |
@@ -79,17 +80,17 @@ controls remain available when model interpretation is disabled.
 See the [promptable modulation proposal](promptable-modulation.md) for example
 prompts, boundary behaviour, and the planned experiments.
 
-## Analysis, ML and hardware boundaries — planned
+## Analysis, ML and hardware boundaries
 
 The [roadmap](roadmap.md) defines the capability layers and their dependency
-gates. The table below is a design direction, not implemented class/API names.
+gates. The table distinguishes current execution paths from future work.
 
-| Responsibility | Planned execution/ownership | Layer |
+| Responsibility | Execution and ownership | Layer |
 |---|---|---|
 | General sources and routes | Bounded audio-thread state with explicit units and reset rules | 6 |
-| Analysis reference | Offline Python experiment, independent of plugin runtime | 9 |
-| Source characteristics | Worker-prepared immutable map tied to source hash/generation, rate and settings | 10 |
-| Grain candidate selection | Prepared bounded tables; fixed/bounded work at launch, manual fallback | 10 |
+| Analysis reference | Implemented offline Python experiment with versioned JSON | 9 |
+| Source characteristics | Implemented C++ analysis on the loader, tied to the decoded source in the packet | 10 |
+| Grain candidate selection | Implemented bounded table lookup at launch, with Manual fallback | 10 |
 | Training and evaluation | Offline Python; recording-level splits and versioned features | 11 |
 | Region inference | Worker-side C++ model, versioned preprocessing and bounded result handoff | 12 |
 | Language interpretation | Worker, schema validation and UI preview before activation | 13 |
@@ -100,16 +101,14 @@ gates. The table below is a design direction, not implemented class/API names.
 
 ### Analysis and model handoff
 
-Keep source data alive until its analysis job ends. Reject results whose source,
-settings, model or generation no longer matches. Specify cancellation, pending
-capacity, replacement and shutdown before implementing the handoff. Audio-thread
-reads must not cause destruction of maps, models or reference-counted objects.
-The callback must never wait for analysis/inference to finish.
+Step 11 keeps the source and candidate tables in the same prepared packet. The
+loader checks for a new request or shutdown between analysis windows. The audio
+thread validates the request revision and output rate at activation and returns
+retired packets to the loader. Preset recall regenerates the tables from the WAV
+and restores the saved mode. See the [Step 11 devlog](devlog/2026-11-11-step-11-sample-aware-playback.md).
 
-Analysis maps are derived data. Define whether state saves a cache reference or
-regenerates a map; include source identity, schema and preprocessing versions.
-Missing maps/models should preserve conventional playback. No model-training or
-Python dependency is required for the ordinary plugin build or playback path.
+Future model results need their own identity and versioning for preprocessing
+and weights. Keep model validation and reclamation outside the callback.
 
 ### Different inference workloads
 

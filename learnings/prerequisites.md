@@ -2,6 +2,7 @@
 
 Step 9 supplies the playable instrument and Step 10 supplies the
 [offline sample analysis experiment](../experiments/sample-analysis/README.md).
+[Step 11](../docs/devlog/2026-11-11-step-11-sample-aware-playback.md) supplies the C++ parity and guided-selection baseline.
 The study items below still need learner confirmation.
 Use the [curriculum](audio-dsp-ml-curriculum.md) and
 [evidence guide](../docs/proof-of-work.md) before changing a study checkbox.
@@ -16,7 +17,7 @@ Use the [curriculum](audio-dsp-ml-curriculum.md) and
 | [ ] | Windowing and overlap | [Window](../src/audio/Window.h) | Derive a window and compare repeated-grain behaviour |
 | [ ] | Interpolation and pitch ratio | [Interpolation](../src/audio/Interpolation.h) | Calculate fractional reads and explain aliasing limitations |
 | [ ] | Grain scheduling and mixing | [GrainCloud](../src/audio/GrainCloud.h) | Explain density, voice capacity, randomness and gain policy |
-| [ ] | Threads, atomics and memory lifetime | [RealtimeEngine](../src/audio/RealtimeEngine.h) | Trace active/pending/retired ownership and stale-rate handling |
+| [ ] | Threads, atomics and memory lifetime | [RealtimeEngine](../src/audio/RealtimeEngine.h) | Trace active/pending/retired ownership, stale revision rejection and worker reclamation |
 | [ ] | LFO routing and smoothing | [Modulation](../src/audio/Modulation.h) | Explain units, ranges and the currently limited destinations |
 | [ ] | MIDI notes, envelopes and controllers | [MidiInstrument](../src/audio/MidiInstrument.h) | Explain last-note priority and event timing versus audible response |
 | [ ] | Plugin lifecycle, UI and state | [Step 9 guide](../docs/step-9-instrument.md) | Build/play and explain host state, missing samples and reset behaviour |

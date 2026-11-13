@@ -147,4 +147,5 @@ Spectral medians use the frames where the feature is available.
 - All 10 existing offline CTest entries passed in a Linux Debug build with
   GCC 14.2 and JUCE 8.0.15 (`91ad83ae`).
 
-Layer 10 tracks C++ feature parity and feature-guided grain selection.
+**Follow-up:** [Step 11](2026-11-11-step-11-sample-aware-playback.md) ports RMS,
+onset and centroid to C++ and uses them for guided grain selection in Layer 10.

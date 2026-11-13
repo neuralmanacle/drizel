@@ -11,6 +11,8 @@ struct PreparedSample
 {
     SampleBuffer source; // Declared first, so it outlives the borrowing cloud.
     GrainCloud<> cloud; // Windows and voice pool belong to this sample.
+    SampleSelection selection;
+    std::uint64_t revision = 0;
     double outputRate; // Reject packets prepared for a previous device rate.
 
     PreparedSample(SampleBuffer data, double rate)
@@ -33,6 +35,14 @@ class RealtimeEngine
 public:
     static_assert(std::atomic<PreparedSample*>::is_always_lock_free,
                   "Real-time handoff requires lock-free pointers");
+    static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
+                  "Real-time revision checks require lock-free atomics");
+    void expectRevision(std::uint64_t revision) noexcept { revision_.store(revision); }
+    bool expectsRevision(std::uint64_t revision) const noexcept
+    {
+        return revision_.load() == revision;
+    }
+
     ~RealtimeEngine()
     {
         delete active_; // Playback and worker have already stopped.
@@ -61,7 +71,8 @@ public:
         density_ = 20.0;
         gain_ = 0.0;
     }
-    GrainFrame next(double position, double pitch, double density, double gain) noexcept
+    GrainFrame next(double position, double pitch, double density, double gain,
+                    GrainSelection mode = GrainSelection::manual) noexcept
     {
         // A packet is only dereferenced after exchange transfers sole ownership.
         const bool waiting = pending_.load() != nullptr;
@@ -71,14 +82,14 @@ public:
             auto* incoming = pending_.exchange(nullptr);
             if (incoming != nullptr)
             {
-                if (incoming->outputRate == rate_)
+                if (incoming->outputRate == rate_ && expectsRevision(incoming->revision))
                 {
                     auto* previous = active_;
                     active_ = incoming; // Old grains are silent before replacement.
                     retired_.store(previous); // Destruction belongs to the worker.
                 }
                 else
-                    retired_.store(incoming); // Stale rate: retain the active source.
+                    retired_.store(incoming); // Superseded packet: retain the active source.
             }
         }
         smooth(position_, position, 0.0, 1.0); // Normalised source start position.
@@ -89,7 +100,7 @@ public:
             return {}; // Loading and unprepared startup are silent.
         active_->cloud.setLiveControls(position_ * (active_->source.frameCount() - 1),
                                         pitch_, density_);
-        const auto frame = active_->cloud.next(); // Fixed-capacity overlap-add.
+        const auto frame = active_->cloud.next(true, &active_->selection, mode); // Fixed-capacity overlap-add.
         return {safe(frame.left), safe(frame.right)};
     }
 
@@ -109,6 +120,7 @@ private:
         const double output = value * fade_ * gain_;
         return std::isfinite(output) ? static_cast<float>(std::clamp(output, -1.0, 1.0)) : 0.0f;
     }
+    std::atomic<std::uint64_t> revision_ {0};
     std::atomic<PreparedSample*> pending_ {nullptr}; // Worker -> audio ownership.
     std::atomic<PreparedSample*> retired_ {nullptr}; // Audio -> worker ownership.
     PreparedSample* active_ = nullptr; // Exclusively audio-owned during processing.

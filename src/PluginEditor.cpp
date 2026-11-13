@@ -49,7 +49,13 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                     safe->processor.requestSample(dialog.getResult());
             });
     };
-    setSize(760, 750);
+    selectionLabel.setText("Grain selection", juce::dontSendNotification);
+    selection.addItemList(juce::StringArray{"Manual", "Attack", "Sustain", "Avoid silence", "Bright"}, 1);
+    selection.setTooltip("Guided modes look near the current Position. If there is no match, the grain starts at Position.");
+    addAndMakeVisible(selectionLabel);
+    addAndMakeVisible(selection);
+    selectionAttachment = std::make_unique<ComboAttachment>(processor.parameters, "grainSelection", selection);
+    setSize(760, 814);
     startTimerHz(30);
     timerCallback();
 }
@@ -127,8 +133,10 @@ void DrizelAudioProcessorEditor::resized()
         else if (i == 10) destination.setBounds(area);
         else mode.setBounds(area);
     }
-    midiHelp.setBounds(20, 680, 720, 30);
-    meterBounds = {20, 720, getWidth() - 40, 16};
+    selectionLabel.setBounds(20, 664, 350, 24);
+    selection.setBounds(20, 690, 350, 32);
+    midiHelp.setBounds(20, 744, 720, 30);
+    meterBounds = {20, 784, getWidth() - 40, 16};
 }
 
 void DrizelAudioProcessorEditor::choosePreset(bool save)

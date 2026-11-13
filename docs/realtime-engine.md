@@ -31,7 +31,8 @@ continues; the processor owns the loader and engine.
 
 | Control | Meaning |
 |---|---|
-| Position, 0–1 | Grain start location across the source, not a continuously advancing playhead |
+| Position, 0–1 | Exact start target in Manual mode and region selector in guided modes |
+| Grain selection | Manual, Attack, Sustain, Avoid silence or Bright |
 | Pitch, −24 to +24 | Semitones relative to source pitch, including source/output rate correction |
 | Density, 1–100 | Number of grains started each second |
 | Output gain, 0–1 | Smoothed multiplier after the cloud mix |
@@ -40,18 +41,20 @@ continues; the processor owns the loader and engine.
 Grains are fixed at 100 ms with Hann envelopes, linear interpolation and stereo
 pan spread. Near the end of a file, grains read zero-padded silence instead of
 wrapping. Pitch shifting retains the earlier interpolator's aliasing limitations.
-Grain length, interpolation selection, MIDI and modulation routing are later work.
+For the controls added after Step 6, see [Step 9 MIDI](step-9-instrument.md)
+and [Step 11 sample-aware playback](devlog/2026-11-11-step-11-sample-aware-playback.md).
 
 ## Ownership and the audio boundary
 
-`PreparedSample` owns decoded samples and its cloud. The source is declared
+`PreparedSample` owns decoded samples, its cloud and the selection tables. The source is declared
 before the cloud so destruction happens in the safe reverse order. The packet
 stays at one address: grains borrow both source data and window tables.
 
 1. The control thread queues a path and increments a request revision under a
    mutex. `prepareToPlay` queues a new output rate through the same mechanism.
 2. The worker snapshots the request, decodes the WAV, scans its peak and prepares
-   windows. A changed revision discards obsolete results before publication.
+   windows and candidate tables. Analysis checks for cancellation between
+   windows. The worker discards obsolete results before publication.
 3. The worker exchanges a raw pointer into a one-slot pending mailbox. An
    exchange transfers exclusive ownership; it is not a shared pointer/refcount.
    Superseded pending packets are destroyed by the worker.
@@ -59,8 +62,8 @@ stays at one address: grains borrow both source data and window tables.
    exchanges the pending pointer to take ownership. It never dereferences a
    pointer borrowed from an atomic load, since the worker could replace it.
 5. At zero fade gain, audio activates a packet with the current output rate and
-   places the previous packet in a separate retirement slot. Wrong-rate packets
-   are retired without replacing the active source.
+   request revision. It places the previous packet in the retirement slot, or
+   retires the incoming packet if its rate or revision is obsolete.
 6. The worker collects retirement slots every 20 ms. If that slot is occupied,
    audio postpones the swap at silence; it never waits, deletes or overwrites an
    uncollected packet. Fade-in takes another 10 ms. This deliberate short dip is
@@ -83,7 +86,8 @@ The coefficient is calculated during preparation. The cloud receives the
 smoothed source position, pitch and density without regenerating windows or
 rescanning samples. Scheduler countdown is rescaled by the interval ratio to
 preserve fractional trigger phase. Existing grains retain their original start,
-pitch and amplitude; updates affect subsequent grains. Output gain and Play
+pitch and amplitude. At launch, guided selection consults a bounded table for
+that region, falling back to Manual when the table is empty. Output gain and Play
 smooth the final mix. A finite check and final clamp protect the output.
 
 Preparation computes grain gain at the **maximum supported density**, 100/s.
@@ -99,8 +103,9 @@ callback. Atomic pointer and float lock-freedom are checked at compile time.
 
 ## State and validation
 
-Host state stores parameter values and the selected sample path, not sample bytes.
-Restoring queues another background decode; missing files report failure. An
+Host state stores parameter values, including grain selection mode, and the
+selected sample path. Restoring queues background decoding and table generation.
+Older states restore Manual mode. Missing files report failure. An
 empty saved path queues a silent source. Projects depend on files remaining at
 their saved paths. The full preset/browser design remains later work.
 

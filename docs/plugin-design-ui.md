@@ -27,13 +27,13 @@ Choose a design question that matters to the current work.
 
 The [interface guide](step-8-interface.md) documents the first instrument editor;
 the [Step 9 guide](step-9-instrument.md) adds MIDI/envelope/root and preset
-controls. Those guides and their verification logs remain the implementation
-record. Source lives in [PluginEditor.h](../src/PluginEditor.h) and
+controls. [Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md) adds the Grain selection menu with five modes
+and a tooltip describing regional lookup and Manual fallback. Source lives in [PluginEditor.h](../src/PluginEditor.h) and
 [PluginEditor.cpp](../src/PluginEditor.cpp), with processor parameters/state in
 [PluginProcessor.cpp](../src/PluginProcessor.cpp).
 
-In that documented baseline, the waveform marker represents base position;
-it does not visualise every grain or the modulated target. The output display
+The waveform marker represents base Position. In guided modes, the selected
+region, feature anchors and actual grain starts would need their own visual indicators. The output display
 is a UI-polled block peak, not a true-peak or clipping-history display. New
 visual concepts should state whether they illustrate existing data or require
 new engine telemetry.

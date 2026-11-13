@@ -166,8 +166,11 @@ preset. Switch to Drone to check audio output without a MIDI keyboard.
 
 Close the outstanding Layer 5 real-time and Layer 7/8 instrument/host checks above,
 complete Layer 6 general modulation and the Layer 2 sound-quality experiments.
-The [integrated roadmap](roadmap.md) then continues through analysis, sample-aware
-playback, audio ML, promptable control and embedded audio as Layers 9–16.
+[Step 10](devlog/2026-11-09-step-10-sample-analysis.md) adds offline analysis.
+[Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md) adds a Grain selection control in both Drone and MIDI modes.
+CC74 still moves Position, which now selects a region when a guided mode is active.
+Step 11 presets save the selection mode. Earlier presets recall in Manual mode.
+The [integrated roadmap](roadmap.md) tracks audio ML, promptable control and embedded audio.
 Use the [curriculum](../learnings/audio-dsp-ml-curriculum.md) and
 [evidence template](proof-of-work.md) at each layer. This planning update does
 not change Step 9's recorded validation results.

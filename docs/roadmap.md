@@ -5,9 +5,10 @@ into applied audio ML and embedded audio. This is the single capability roadmap:
 each layer connects theory, an experiment, implementation, validation and proof
 of work. Study can proceed offline while integration waits for its prerequisites.
 
-> **9 November 2026** — Step 9's MIDI, interface and preset work (Layers 7–8) is
-> merged into `main`. Step 10 delivers the offline Layer 9 sample map and study. Earlier
-> DSP, modulation and host acceptance checks and Layers 10–16 are still open.
+> **11 November 2026** — Step 9 delivers the playable MIDI instrument and presets
+> (Layers 7–8). Step 10 delivers the offline sample map and study (Layer 9).
+> Step 11 implements guided grain selection (Layer 10). DSP quality, general
+> modulation, DAW acceptance and Layers 11–16 have open work.
 
 ## How to read this roadmap
 
@@ -481,37 +482,38 @@ region maps back to the correct source interval. No plugin integration yet.
 
 ## Layer 10: Sample-aware granular playback
 
-**Status:** Planned.
+**Status:** Initial playback implementation in [Step 11](devlog/2026-11-11-step-11-sample-aware-playback.md).
 
 **Goal:** Let musicians bias grain selection using measured source characteristics.
 
-**Prerequisite:** Validated engine and general modulation (Layers 5–6), plus the Layer 9 analysis reference.
+**Prerequisite:** The initial selector uses the existing real-time engine, smoothed position and Layer 9 analysis reference. Broader engine and modulation acceptance remains tracked in Layers 5–6.
 
 **Study:** Python/C++ equivalence, immutable analysis data, weighted sampling,
 background jobs, cache invalidation and confidence-aware UI.
 
 **Build and experiments**
 
-- [ ] Port a minimal useful feature subset to framework-independent C++; compare
+- [x] Port a minimal useful feature subset to framework-independent C++; compare
   against Layer 9 using shared fixtures and stated numerical tolerances.
-- [ ] Prepare analysis on a worker. Keep source ownership valid for the job,
-  reject stale results after sample/rate/settings changes and reclaim retired
+- [x] Prepare analysis on a worker. Keep source ownership valid for the job,
+  reject stale results after sample, rate or preset changes and reclaim retired
   maps outside the callback, including cancellation and shutdown paths.
-- [ ] Precompute bounded region/candidate tables outside playback; avoid scanning
+- [x] Precompute bounded region/candidate tables outside playback; avoid scanning
   a whole sample or rebuilding a probability distribution for every grain.
-- [ ] Add attack/sustain preference, silence avoidance and brightness selection
-  incrementally. Define empty-candidate and low-confidence fallback to manual
-  selection, seed/reset behaviour and the selected-region boundary policy.
-- [ ] Keep feature-based selection distinct from claims of semantic recognition.
-  Pitch/root suggestions, if explored, need confidence and manual override.
-- [ ] Version analysis/selection state and define cache regeneration on recall;
-  recheck host-state, loading, concurrent handoff and callback timing.
+- [x] Add attack/sustain preference, silence avoidance and brightness selection
+  with mode-specific eligibility thresholds, Manual fallback for empty regions,
+  a seeded draw at launch and a documented feature-anchor boundary policy.
+- [x] Save selection mode and regenerate tables from the WAV on recall. Verify
+  mode recall and the Manual default for older presets in processor tests.
+- [ ] Listen across annotated WAVs in a DAW and measure callback timing while
+  replacing long files. Evaluate region and fallback feedback in the editor.
+- [ ] Define analysis/selection versioning before introducing configurable
+  analysis settings or a persistent cache.
 
-**Proof of work:** C++/Python comparison, sample-map UI demo, same-source A/B textures and
-cost measurements with analysis enabled, disabled and rebuilding.
+**Proof of work:** The [Step 11 devlog](devlog/2026-11-11-step-11-sample-aware-playback.md) records the C++/Python comparison, a synthetic same-source render and core timing with a worker rebuilding tables. DAW listening, host timing and selection feedback remain open.
 
-**Exit criteria:** useful sample-aware playback without inference, stale map use, callback
-blocking or loss of ordinary manual controls. This becomes the ML baseline.
+**Exit criteria:** demonstrate useful guided textures in a DAW, verify callback
+headroom during replacement and confirm Manual fallback. This becomes the ML baseline.
 
 ---
 
