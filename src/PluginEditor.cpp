@@ -20,12 +20,13 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     for (std::size_t i = 0; i < labels.size(); ++i)
     {
         labels[i].setText(names[i], juce::dontSendNotification);
+        labels[i].setJustificationType(juce::Justification::centred);
         addAndMakeVisible(labels[i]);
     }
     for (std::size_t i = 0; i < sliders.size(); ++i)
     {
-        sliders[i].setSliderStyle(juce::Slider::LinearHorizontal);
-        sliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 80, 24);
+        sliders[i].setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        sliders[i].setTextBoxStyle(juce::Slider::TextBoxBelow, false, 74, 19);
         addAndMakeVisible(sliders[i]);
         attachments[i] = std::make_unique<SliderAttachment>(processor.parameters, ids[i], sliders[i]);
     }
@@ -83,10 +84,11 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     {
         auto& slider = movementSettings[i];
         movementLabels[i].setText(settings[i], juce::dontSendNotification);
+        movementLabels[i].setJustificationType(juce::Justification::centred);
         slider.setTitle(settings[i]);
         slider.setRange(minimum[i], maximum[i], i == 2 ? 50 : 1);
-        slider.setSliderStyle(juce::Slider::LinearHorizontal);
-        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 55, 19);
         addAndMakeVisible(movementLabels[i]);
         addAndMakeVisible(slider);
     }
@@ -136,7 +138,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
              &keyboard, &keyboardRange, &octaveDown, &octaveUp, &movementTitle})
         addAndMakeVisible(component);
     setKeyboardOctave(3);
-    setSize(900, 775);
+    setSize(900, 810);
     startTimerHz(30);
     timerCallback();
 }
@@ -315,21 +317,26 @@ void DrizelAudioProcessorEditor::resized()
         row.removeFromLeft(10);
         auto controls = banks[i].reduced(10, 0);
         controls.removeFromTop(26);
-        for (const int index : groups[i])
+        for (int slot = 0; slot < 5; ++slot)
         {
+            const int index = groups[i][slot];
             if (index == -2) break;
-            auto line = controls.removeFromTop(34);
             if (index == -1)
             {
+                auto line = controls.withTrimmedTop(148).withHeight(28);
                 selectionLabel.setBounds(line.removeFromLeft(102));
-                selection.setBounds(line.reduced(0, 4));
+                selection.setBounds(line.reduced(0, 3));
                 continue;
             }
-            labels[static_cast<std::size_t>(index)].setBounds(line.removeFromLeft(100));
-            if (index < 9) sliders[static_cast<std::size_t>(index)].setBounds(line);
-            else if (index == 9) shape.setBounds(line.reduced(0, 4));
-            else if (index == 10) destination.setBounds(line.reduced(0, 4));
-            else mode.setBounds(line.reduced(0, 4));
+            const int cellWidth = controls.getWidth() / 2;
+            auto cell = juce::Rectangle<int>(controls.getX() + (slot % 2) * cellWidth,
+                                            controls.getY() + (slot / 2) * 74,
+                                            cellWidth, 74).reduced(3, 0);
+            labels[static_cast<std::size_t>(index)].setBounds(cell.removeFromTop(19));
+            if (index < 9) sliders[static_cast<std::size_t>(index)].setBounds(cell);
+            else if (index == 9) shape.setBounds(cell.withSizeKeepingCentre(cell.getWidth(), 26));
+            else if (index == 10) destination.setBounds(cell.withSizeKeepingCentre(cell.getWidth(), 26));
+            else mode.setBounds(cell.withSizeKeepingCentre(cell.getWidth(), 26));
         }
     }
     movementTitle.setBounds(20, 462, getWidth() - 40, 20);
@@ -344,20 +351,20 @@ void DrizelAudioProcessorEditor::resized()
 #endif
     actions.removeFromLeft(8);
     movementStatus.setBounds(actions);
-    const auto settingWidth = (getWidth() - 40) / 3;
+    auto settingsRow = juce::Rectangle<int>(20, 572, getWidth() - 40, 86);
+    const int settingWidth = settingsRow.getWidth() / int(movementSettings.size());
     for (std::size_t i = 0; i < movementSettings.size(); ++i)
     {
-        auto line = juce::Rectangle<int>(20 + int(i % 3) * settingWidth,
-                                          572 + int(i / 3) * 25, settingWidth - 10, 24);
-        movementLabels[i].setBounds(line.removeFromLeft(135));
-        movementSettings[i].setBounds(line);
+        auto cell = settingsRow.removeFromLeft(settingWidth).reduced(3, 0);
+        movementLabels[i].setBounds(cell.removeFromTop(20));
+        movementSettings[i].setBounds(cell);
     }
-    keyboardRange.setBounds(20, 629, 200, 24);
-    octaveDown.setBounds(222, 629, 28, 24);
-    octaveUp.setBounds(254, 629, 28, 24);
-    midiHelp.setBounds(294, 629, getWidth() - 314, 24);
+    keyboardRange.setBounds(20, 664, 200, 24);
+    octaveDown.setBounds(222, 664, 28, 24);
+    octaveUp.setBounds(254, 664, 28, 24);
+    midiHelp.setBounds(294, 664, getWidth() - 314, 24);
     keyboard.setKeyWidth(float(getWidth() - 40) / 14.0f);
-    keyboard.setBounds(20, 660, getWidth() - 40, 95);
+    keyboard.setBounds(20, 695, getWidth() - 40, 95);
 }
 
 void DrizelAudioProcessorEditor::choosePreset(bool save)
