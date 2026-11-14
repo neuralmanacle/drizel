@@ -56,7 +56,7 @@ def load_dataset(manifest_path, cache_dir):
         if digest != recording["sha256"]:
             raise ValueError("WAV checksum mismatch: " + str(wav))
         output = cache_dir / digest
-        output.mkdir(parents=True, exist_ok=True)
+        output.parent.mkdir(parents=True, exist_ok=True)
         map_path = output / "sample-map.json"
         if not map_path.exists():
             subprocess.run([sys.executable, str(ROOT / "experiments/sample-analysis/analyze.py"),
