@@ -46,13 +46,30 @@ int main()
         check(audio.getMagnitude(17, 24) > 0, "note produces sound at nonzero offset");
         check(audio.getMagnitude(47, 17) == 0, "release returns to exact silence");
         check(midi.isEmpty(), "MIDI input consumed");
+        p.setPanelNote(60, 127);
+        p.processBlock(audio, midi);
+        check(audio.getMagnitude(0, 64) > 0, "panel key produces sound");
+        midi.addEvent(juce::MidiMessage::noteOn(1, 60, 1.0f), 0);
+        p.processBlock(audio, midi);
+        check(p.displayedHostNote() == 60, "host note is visible on the panel");
+        p.setPanelNote(60, 0);
+        p.processBlock(audio, midi);
+        check(audio.getMagnitude(0, 64) > 0, "panel release preserves the held host note");
+        midi.addEvent(juce::MidiMessage::noteOff(1, 60), 0);
+        p.processBlock(audio, midi);
+        check(p.displayedHostNote() == -1, "host note highlight clears");
+        check(audio.getMagnitude(8, 56) == 0, "last key release reaches silence");
         set(p, "position", 0.35f); set(p, "rootNote", 48); set(p, "lfoDepth", 0.7f);
         set(p, "grainSelection", 4);
         const auto preset = directory.getChildFile("patch.drizel");
+        p.setMovement({drizel::MovementPattern::stepped, 20, 70, 6, 15, 30, 40});
+        const auto expectedMovement = p.activeMovement().packed();
         check(p.savePreset(preset), "preset write");
         set(p, "grainSelection", 0);
         set(p, "position", 0.8f); set(p, "rootNote", 60);
+        p.setMovement({});
         check(p.loadPreset(preset), "preset read");
+        check(p.activeMovement().packed() == expectedMovement, "preset restores movement policy");
         check(std::abs(p.parameters.getRawParameterValue("position")->load() - 0.35f) < 1e-5f,
               "preset restores parameter");
         check(p.parameters.getRawParameterValue("rootNote")->load() == 48, "preset restores MIDI setting");
@@ -66,11 +83,14 @@ int main()
               "host state restores modulation");
         const auto legacyPreset = directory.getChildFile("legacy.drizel");
         auto legacyState = p.parameters.copyState();
+        legacyState.removeProperty("movementPolicyV1", nullptr);
         legacyState.removeChild(legacyState.getChildWithProperty("id", "grainSelection"), nullptr);
         juce::MemoryBlock legacyData;
         juce::AudioProcessor::copyXmlToBinary(*legacyState.createXml(), legacyData);
         check(legacyPreset.replaceWithData(legacyData.getData(), legacyData.getSize()), "write legacy preset");
         check(p.loadPreset(legacyPreset), "legacy preset loads");
+        check(p.activeMovement().pattern == drizel::MovementPattern::manual,
+              "legacy preset restores manual movement");
         check(p.parameters.getRawParameterValue("grainSelection")->load() == 0,
               "legacy state restores manual selection");
         const auto invalid = directory.getChildFile("invalid.drizel");
