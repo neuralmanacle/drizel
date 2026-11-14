@@ -33,6 +33,39 @@ class RegionMLTests(unittest.TestCase):
             predict, _ = trainer(x, y, epochs=5)
             self.assertTrue(np.isfinite(predict(x)).all())
 
+    def test_ambiguous_regions_abstain(self):
+        for label in ("Quiet claves tail", "Claves decay", "Unknown mixed texture"):
+            recording = {"regions": [{"label": label, "start_sample": 0,
+                                      "end_sample_exclusive": 1000}]}
+            self.assertIsNone(module.label_for(recording, {"center_sample": 100}, 48000))
+
+    def test_balanced_weights(self):
+        y = np.array([0, 1, 1, 1])
+        weights = module.class_weights(y)
+        self.assertAlmostEqual(weights[0], 2.0)
+        self.assertAlmostEqual(weights[1], 2.0 / 3.0)
+        self.assertEqual(weights[2], 0)
+
+    def test_temporal_features_and_zcr(self):
+        frames = [
+            {"rms": 0.1, "onset_strength": None, "centroid_hz": 100, "flatness": .2},
+            {"rms": 0.2, "onset_strength": .4, "centroid_hz": 150, "flatness": .3},
+        ]
+        x = module.feature_vectors(frames, [0.1, 0.2])
+        self.assertEqual(len(x[0]), len(module.FEATURES))
+        self.assertAlmostEqual(x[0][4], 0)
+        self.assertAlmostEqual(x[1][4], .1)
+        self.assertAlmostEqual(x[1][5], .4)
+        self.assertAlmostEqual(x[1][-1], .2)
+
+    def test_pooled_metrics(self):
+        matrix = np.zeros((4, 4), dtype=int)
+        matrix[1, 1] = 2
+        matrix[2, 1] = 1
+        report = module.metrics_from_matrix(matrix)
+        self.assertAlmostEqual(report["accuracy"], 2 / 3)
+        self.assertEqual(report["per_class"]["noise"]["recall"], 0)
+
     def test_metrics_missing_class_explicit(self):
         result = module.metrics(np.array([1, 1]), np.array([1, 0]))
         self.assertEqual(result["per_class"]["attack"]["support"], 0)
