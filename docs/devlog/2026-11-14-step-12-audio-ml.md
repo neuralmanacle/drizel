@@ -50,3 +50,31 @@ and a Step 11 listening comparison before choosing a model for Layer 12.
 4. Dense neural networks and tanh backpropagation
 5. Confusion matrices, per-class F1 and missing-class coverage
 6. Why classification accuracy alone does not imply better grain selection
+
+
+## Step 12.1 follow-up — conservative labeling and class balancing
+
+The first user-run evaluation completed on six recordings (386 labeled frames).
+It exposed weak cross-recording generalization: both learned models missed
+attack and noise in the pooled evaluation, and the DSP-rule baseline had higher
+macro-F1. These are *Step 12* results, **not** results of Step 12.1.
+
+Step 12.1 changes:
+- Abstain on ambiguous quiet claves tails and percussive claves decay rather
+  than asserting that they are silence or sustained tonal material.
+- Add log-RMS, frame-to-frame changes in RMS/onset/centroid/flatness, and
+  waveform zero-crossing rate. The original Step 10 feature map stays v1.
+- Apply inverse-frequency loss weights to both learned classifiers, computed
+  only from each fold's training labels.
+- Report pooled out-of-fold confusion matrices, accuracy, per-class scores,
+  and recording-specific fold metrics; preserve recording-level isolation.
+- Add regression tests for abstention, class weights, temporal features and
+  aggregate metrics.
+
+**Verification status:** Changes were committed to the development branch,
+and the source was inspected. No Python test execution or fresh Step 12.1
+evaluation was possible in the authoring environment. Re-run the documented
+commands locally; do not reuse the Step 12 report as Step 12.1 evidence.
+The new run should be reviewed for label coverage and failure cases.
+
+**Deployment verdict: defer.** No C++ audio callback or plugin inference change.
