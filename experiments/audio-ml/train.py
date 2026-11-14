@@ -50,8 +50,17 @@ def load_dataset(manifest_path, cache_dir):
     provenance = []
     for recording in manifest["recordings"]:
         wav = (manifest_path.parent / recording["file"]).resolve()
+        if not wav.is_file() and recording.get("generated_fixture"):
+            wav.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run([sys.executable,
+                            str(ROOT / "experiments/sample-analysis/fixture.py"),
+                            str(wav)], check=True, capture_output=True, text=True)
         if not wav.is_file():
-            raise FileNotFoundError(wav)
+            raise FileNotFoundError(
+                f"Missing corpus recording: {wav}. Restore the original WAV "
+                "specified in experiments/sample-analysis/corpus/manifest.json; "
+                "only generated fixtures can be recreated automatically."
+            )
         digest = hashlib.sha256(wav.read_bytes()).hexdigest()
         if digest != recording["sha256"]:
             raise ValueError("WAV checksum mismatch: " + str(wav))
