@@ -13,11 +13,13 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from scipy.io import wavfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 LABELS = ("attack", "tonal", "noise", "silence")
-FEATURES = ("rms", "onset_strength", "centroid_hz", "flatness")
+FEATURES = ("log_rms", "onset_strength", "centroid_hz", "flatness",
+            "rms_delta", "onset_delta", "centroid_delta", "flatness_delta", "zcr")
 SEED = 12012
 
 
@@ -29,18 +31,47 @@ def label_for(recording, frame, sample_rate):
     for region in recording["regions"]:
         if region["start_sample"] <= center < region["end_sample_exclusive"]:
             name = region["label"].lower()
-            if "silence" in name or "quiet" in name:
+            if "silence" in name:
                 return "silence"
             if "noise" in name or "rain" in name:
                 return "noise"
-            if any(word in name for word in ("sine", "guitar", "sax", "claves")):
+            if any(word in name for word in ("sine", "guitar", "sax")):
                 return "tonal"
-    return None  # Never treat unannotated material as negative examples.
+    return None  # Quiet tails, claves decay and unannotated material abstain.
 
 
-def vector(frame):
-    values = [frame.get(key) for key in FEATURES]
-    return np.array([0.0 if value is None else float(value) for value in values])
+def zero_crossing_rates(wav, frames):
+    """Frame-aligned ZCR in the original WAV; no learned parameters."""
+    rate, raw = wavfile.read(wav)
+    audio = raw.astype(np.float64)
+    if raw.dtype.kind == "u":
+        midpoint = (np.iinfo(raw.dtype).max + 1) / 2
+        audio = (audio - midpoint) / midpoint
+    elif raw.dtype.kind == "i":
+        audio /= -float(np.iinfo(raw.dtype).min)
+    if audio.ndim == 2:
+        audio = audio.mean(axis=1)
+    rates = []
+    for frame in frames:
+        segment = audio[frame["start_sample"]:frame["end_sample_exclusive"]]
+        rates.append(float(np.mean(np.signbit(segment[1:]) !=
+                                   np.signbit(segment[:-1])))
+                     if len(segment) > 1 else 0.0)
+    return rates
+
+
+def feature_vectors(frames, zcr):
+    """Deltas use only current/previous frames, never future context."""
+    vectors = []
+    previous = None
+    for frame, crossing in zip(frames, zcr):
+        raw = np.array([float(frame.get(key) or 0.0)
+                        for key in ("rms", "onset_strength", "centroid_hz", "flatness")])
+        delta = raw - previous if previous is not None else np.zeros(4)
+        vectors.append(np.array([np.log1p(raw[0] * 1000), *raw[1:],
+                                 *delta, crossing], dtype=float))
+        previous = raw
+    return vectors
 
 
 def load_dataset(manifest_path, cache_dir):
@@ -75,10 +106,12 @@ def load_dataset(manifest_path, cache_dir):
             raise ValueError("Stale or incompatible sample map: " + str(map_path))
         rate = sample_map["source"]["sample_rate_hz"]
         count = 0
-        for frame in sample_map["frames"]:
+        frames = sample_map["frames"]
+        vectors = feature_vectors(frames, zero_crossing_rates(wav, frames))
+        for frame, features in zip(frames, vectors):
             label = label_for(recording, frame, rate)
             if label is not None:
-                xs.append(vector(frame))
+                xs.append(features)
                 ys.append(LABELS.index(label))
                 groups.append(digest)
                 count += 1
@@ -102,13 +135,22 @@ def softmax(logits):
     return exp / exp.sum(axis=1, keepdims=True)
 
 
+def class_weights(y):
+    counts = np.bincount(y, minlength=len(LABELS))
+    weights = np.zeros(len(LABELS), dtype=float)
+    present = counts > 0
+    weights[present] = len(y) / (present.sum() * counts[present])
+    return weights
+
+
 def train_linear(x, y, epochs=300, lr=.08):
     rng = np.random.default_rng(SEED)
     w = rng.normal(0, .01, (x.shape[1], len(LABELS)))
     b = np.zeros(len(LABELS))
     target = np.eye(len(LABELS))[y]
+    sample_weights = class_weights(y)[y]
     for _ in range(epochs):
-        diff = (softmax(x @ w + b) - target) / len(y)
+        diff = (softmax(x @ w + b) - target) * sample_weights[:, None] / len(y)
         w -= lr * (x.T @ diff + .001 * w)
         b -= lr * diff.sum(axis=0)
     return lambda values: values @ w + b, {"w": w.tolist(), "b": b.tolist()}
@@ -121,9 +163,10 @@ def train_mlp(x, y, epochs=350, lr=.035):
     w2 = rng.normal(0, .15, (12, len(LABELS)))
     b2 = np.zeros(len(LABELS))
     target = np.eye(len(LABELS))[y]
+    sample_weights = class_weights(y)[y]
     for _ in range(epochs):
         h = np.tanh(x @ w1 + b1)
-        diff = (softmax(h @ w2 + b2) - target) / len(y)
+        diff = (softmax(h @ w2 + b2) - target) * sample_weights[:, None] / len(y)
         dw2 = h.T @ diff + .001 * w2
         db2 = diff.sum(axis=0)
         dh = (diff @ w2.T) * (1 - h * h)
@@ -160,6 +203,8 @@ def metrics(truth, predicted):
 def evaluate(x, y, groups):
     # Leave-one-recording-out: no frames from the same WAV cross a fold.
     folds = []
+    pooled = {name: np.zeros((len(LABELS), len(LABELS)), dtype=int)
+              for name in ("majority", "rule", "linear", "mlp")}
     for held_out in sorted(set(groups)):
         test = groups == held_out
         train = ~test
@@ -170,17 +215,30 @@ def evaluate(x, y, groups):
         mlp, _ = train_mlp(xt, y[train])
         predictions = {
             "majority": np.full(test.sum(), majority, dtype=int),
-            "rule": np.array([0 if a[1] > .02 else 3 if a[0] < 1e-4 else 2 if a[3] > .5 else 1
+            "rule": np.array([0 if a[1] > .02 else 3 if a[0] < np.log1p(.1) else 2 if a[3] > .5 else 1
                               for a in x[test]], dtype=int),
             "linear": linear(xv).argmax(axis=1),
             "mlp": mlp(xv).argmax(axis=1),
         }
+        for name, pred in predictions.items():
+            pooled[name] += np.array(metrics(y[test], pred)["confusion_matrix"])
         folds.append({"held_out_sha256": held_out, "test_frames": int(test.sum()),
                       "train_labels": [LABELS[i] for i in np.flatnonzero(counts)],
                       "missing_train_labels": [LABELS[i] for i in np.flatnonzero(counts == 0)],
                       "metrics": {name: metrics(y[test], pred)
                                   for name, pred in predictions.items()}})
-    return folds
+    return folds, {name: metrics_from_matrix(matrix) for name, matrix in pooled.items()}
+
+
+def metrics_from_matrix(matrix):
+    truth, predictions = [], []
+    for i in range(len(LABELS)):
+        for j in range(len(LABELS)):
+            truth.extend([i] * int(matrix[i, j]))
+            predictions.extend([j] * int(matrix[i, j]))
+    result = metrics(truth, predictions)
+    result["accuracy"] = float(np.trace(matrix) / matrix.sum()) if matrix.sum() else None
+    return result
 
 
 def main():
@@ -191,13 +249,17 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as directory:
         x, y, groups, provenance = load_dataset(args.manifest, Path(directory))
-    folds = evaluate(x, y, groups)
+    folds, aggregate = evaluate(x, y, groups)
     report = {"schema_version": 1, "seed": SEED, "labels": LABELS,
               "features": FEATURES, "dataset": provenance, "folds": folds,
+              "aggregate": aggregate, "training": {"class_weighting": "inverse-frequency",
+              "split": "leave-one-recording-out", "normalization": "train-only",
+              "linear_epochs": 300, "mlp_epochs": 350, "mlp_hidden": 12},
               "limitations": ["Recording-grouped exploratory leave-one-out evaluation",
                               "Missing classes in training folds; not a deployment-ready model",
                               "No independent untouched final test set",
-                              "Rule thresholds are exploratory, not tuned on a validation set"],
+                              "Rule thresholds are exploratory, not tuned on a validation set",
+                              "Ambiguous/quiet/percussive decay frames abstain; no human-reviewed ground truth"],
               "deployment_verdict": "defer"}
     path = args.output / "report.json"
     path.write_text(json.dumps(report, indent=2) + "\n")
