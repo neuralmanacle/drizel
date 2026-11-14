@@ -138,7 +138,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
              &keyboard, &keyboardRange, &octaveDown, &octaveUp, &movementTitle})
         addAndMakeVisible(component);
     setKeyboardOctave(3);
-    setSize(900, 810);
+    setSize(900, 874);
     startTimerHz(30);
     timerCallback();
 }
@@ -308,7 +308,10 @@ void DrizelAudioProcessorEditor::resized()
     waveformBounds = {20, 80, getWidth() - 40, 136};
     meterBounds = {getWidth() - 147, 228, 127, 10};
 
-    auto row = juce::Rectangle<int>(20, 250, getWidth() - 40, 206);
+    constexpr int knobRowHeight = 96;
+    constexpr int controlBankHeight = 26 + 2 * knobRowHeight + 32;
+    auto row = juce::Rectangle<int>(20, 250, getWidth() - 40, controlBankHeight);
+    const int movementTop = row.getBottom() + 6;
     const auto bankWidth = (row.getWidth() - 20) / 3;
     const int groups[][5] = {{0, 2, 1, 3, -1}, {7, 8, 6, 11, -2}, {4, 5, 9, 10, -2}};
     for (std::size_t i = 0; i < banks.size(); ++i)
@@ -323,15 +326,15 @@ void DrizelAudioProcessorEditor::resized()
             if (index == -2) break;
             if (index == -1)
             {
-                auto line = controls.withTrimmedTop(148).withHeight(28);
+                auto line = controls.withTrimmedTop(2 * knobRowHeight).withHeight(28);
                 selectionLabel.setBounds(line.removeFromLeft(102));
                 selection.setBounds(line.reduced(0, 3));
                 continue;
             }
             const int cellWidth = controls.getWidth() / 2;
             auto cell = juce::Rectangle<int>(controls.getX() + (slot % 2) * cellWidth,
-                                            controls.getY() + (slot / 2) * 74,
-                                            cellWidth, 74).reduced(3, 0);
+                                            controls.getY() + (slot / 2) * knobRowHeight,
+                                            cellWidth, knobRowHeight).reduced(3, 0);
             labels[static_cast<std::size_t>(index)].setBounds(cell.removeFromTop(19));
             if (index < 9) sliders[static_cast<std::size_t>(index)].setBounds(cell);
             else if (index == 9) shape.setBounds(cell.withSizeKeepingCentre(cell.getWidth(), 26));
@@ -339,9 +342,9 @@ void DrizelAudioProcessorEditor::resized()
             else mode.setBounds(cell.withSizeKeepingCentre(cell.getWidth(), 26));
         }
     }
-    movementTitle.setBounds(20, 462, getWidth() - 40, 20);
-    movementCommand.setBounds(20, 484, getWidth() - 40, 50);
-    auto actions = juce::Rectangle<int>(20, 540, getWidth() - 40, 26);
+    movementTitle.setBounds(20, movementTop, getWidth() - 40, 20);
+    movementCommand.setBounds(20, movementTop + 22, getWidth() - 40, 50);
+    auto actions = juce::Rectangle<int>(20, movementTop + 78, getWidth() - 40, 26);
     previewButton.setBounds(actions.removeFromLeft(90).reduced(2, 0));
     applyButton.setBounds(actions.removeFromLeft(78).reduced(2, 0));
     manualButton.setBounds(actions.removeFromLeft(105).reduced(2, 0));
@@ -351,7 +354,7 @@ void DrizelAudioProcessorEditor::resized()
 #endif
     actions.removeFromLeft(8);
     movementStatus.setBounds(actions);
-    auto settingsRow = juce::Rectangle<int>(20, 572, getWidth() - 40, 86);
+    auto settingsRow = juce::Rectangle<int>(20, movementTop + 110, getWidth() - 40, 106);
     const int settingWidth = settingsRow.getWidth() / int(movementSettings.size());
     for (std::size_t i = 0; i < movementSettings.size(); ++i)
     {
@@ -359,12 +362,13 @@ void DrizelAudioProcessorEditor::resized()
         movementLabels[i].setBounds(cell.removeFromTop(20));
         movementSettings[i].setBounds(cell);
     }
-    keyboardRange.setBounds(20, 664, 200, 24);
-    octaveDown.setBounds(222, 664, 28, 24);
-    octaveUp.setBounds(254, 664, 28, 24);
-    midiHelp.setBounds(294, 664, getWidth() - 314, 24);
+    const int keyboardHeader = settingsRow.getBottom() + 6;
+    keyboardRange.setBounds(20, keyboardHeader, 200, 24);
+    octaveDown.setBounds(222, keyboardHeader, 28, 24);
+    octaveUp.setBounds(254, keyboardHeader, 28, 24);
+    midiHelp.setBounds(294, keyboardHeader, getWidth() - 314, 24);
     keyboard.setKeyWidth(float(getWidth() - 40) / 14.0f);
-    keyboard.setBounds(20, 695, getWidth() - 40, 95);
+    keyboard.setBounds(20, keyboardHeader + 31, getWidth() - 40, 95);
 }
 
 void DrizelAudioProcessorEditor::choosePreset(bool save)
