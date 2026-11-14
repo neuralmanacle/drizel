@@ -89,7 +89,10 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         return;
     }
     const bool useMidi = midiMode->load() >= 0.5f;
-    if (resetInstrument.exchange(false) || useMidi != previousMidiMode)
+    const bool recalledState = resetInstrument.exchange(false);
+    if (recalledState)
+        movement.restart();
+    if (recalledState || useMidi != previousMidiMode)
     {
         instrument.reset();
         playingPanelKeys.fill(0);
@@ -206,6 +209,22 @@ void DrizelAudioProcessor::requestSample(const juce::File& file)
     engine.expectRevision(++revision); // Newest request wins if a previous decode is still running.
     notify();
 }
+std::uint64_t DrizelAudioProcessor::sampleRequestRevision()
+{
+    const juce::ScopedLock lock(requestLock);
+    return revision;
+}
+
+bool DrizelAudioProcessor::applyMovementForSample(drizel::MovementPolicy policy,
+                                                std::uint64_t expectedRevision)
+{
+    const juce::ScopedLock lock(requestLock);
+    if (revision != expectedRevision || !policy.valid())
+        return false;
+    setMovement(policy);
+    return true;
+}
+
 DrizelAudioProcessor::SampleDisplayState DrizelAudioProcessor::loadedSampleState()
 {
     const juce::ScopedLock lock(requestLock);
@@ -282,7 +301,6 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
         auto state = juce::ValueTree::fromXml(*xml);
         if (state.hasType(parameters.state.getType()))
         {
-            resetInstrument.store(true);
             // Older states predate the selection parameter. Restore its default
             // explicitly even if a guided mode was active before recall.
             if (!state.getChildWithProperty("id", "grainSelection").isValid())
@@ -296,13 +314,14 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
             const auto packed = static_cast<std::uint64_t>(savedMovement.getLargeIntValue());
             const auto restored = drizel::MovementPolicy::unpack(packed);
             const auto canonical = juce::String(static_cast<juce::int64>(restored.packed()));
-            setMovement(restored.valid() && savedMovement == canonical
-                            ? restored : drizel::MovementPolicy{});
             parameters.replaceState(state); // JUCE updates the atomic parameter values.
             const auto path = state.getProperty("samplePath").toString();
             const juce::ScopedLock lock(requestLock);
+            setMovement(restored.valid() && savedMovement == canonical
+                            ? restored : drizel::MovementPolicy{});
             requestedPath = path; // An empty saved path also replaces the old source.
             status = path.isEmpty() ? "Load a WAV to begin" : "Restoring sample...";
+            resetInstrument.store(true);
             engine.expectRevision(++revision);
             notify(); // Decode/clear remains asynchronous.
         }

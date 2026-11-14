@@ -91,9 +91,27 @@ void MovementSpeech::start(Result result)
                             return;
                         }
                         current->recognizer = [[SFSpeechRecognizer alloc] init];
-                        if (!current->recognizer.available || !current->recognizer.supportsOnDeviceRecognition)
+                        const auto canRecognizeLocally = [](SFSpeechRecognizer* recognizer) {
+                            return recognizer.available && recognizer.supportsOnDeviceRecognition;
+                        };
+                        if (!canRecognizeLocally(current->recognizer))
                         {
-                            current->complete({}, "On-device speech unavailable. Type your command.");
+                            // Movement commands use English. Try available English assets
+                            // when the system locale has no local recognizer.
+                            for (NSString* identifier in @[@"en-IN", @"en-US", @"en-GB"])
+                            {
+                                auto* candidate = [[SFSpeechRecognizer alloc]
+                                    initWithLocale:[NSLocale localeWithLocaleIdentifier:identifier]];
+                                if (canRecognizeLocally(candidate))
+                                {
+                                    current->recognizer = candidate;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!canRecognizeLocally(current->recognizer))
+                        {
+                            current->complete({}, "No local English speech model. Try macOS Dictation.");
                             return;
                         }
                         current->engine = [[AVAudioEngine alloc] init];

@@ -36,6 +36,7 @@ private:
     std::array<juce::Slider, 6> movementSettings;
     std::array<juce::Label, 6> movementLabels;
     drizel::MovementPolicy proposedMovement;
+    std::uint64_t previewRevision = 0;
     void timerCallback() override;
     void setWaveformPosition(float x);
     void endWaveformGesture();

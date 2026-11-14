@@ -42,6 +42,7 @@ class GrainMovement
 {
 public:
     void prepare(double rate) noexcept { sampleRate = std::max(1.0, rate); }
+    void restart() noexcept { current = 0; }
     void accept(std::uint64_t word) noexcept
     {
         if (word == current)

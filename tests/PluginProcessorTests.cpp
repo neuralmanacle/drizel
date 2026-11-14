@@ -64,6 +64,16 @@ int main()
         const auto preset = directory.getChildFile("patch.drizel");
         p.setMovement({drizel::MovementPattern::stepped, 20, 70, 6, 15, 30, 40});
         const auto expectedMovement = p.activeMovement().packed();
+        const auto previewRevision = p.sampleRequestRevision();
+        auto invalidMovement = p.activeMovement();
+        invalidMovement.end = invalidMovement.start;
+        check(!p.applyMovementForSample(invalidMovement, previewRevision), "invalid preview rejected");
+        check(p.activeMovement().packed() == expectedMovement, "invalid preview preserves policy");
+        p.requestSample(wav);
+        check(!p.applyMovementForSample({}, previewRevision), "sample request invalidates preview");
+        check(p.activeMovement().packed() == expectedMovement, "stale preview preserves policy");
+        check(p.applyMovementForSample(p.activeMovement(), p.sampleRequestRevision()),
+              "current preview accepted");
         check(p.savePreset(preset), "preset write");
         set(p, "grainSelection", 0);
         set(p, "position", 0.8f); set(p, "rootNote", 60);

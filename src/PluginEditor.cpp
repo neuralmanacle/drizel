@@ -71,6 +71,9 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     previewButton.onClick = [this] { previewMovement(); };
     applyButton.onClick = [this] { applyMovement(); };
     manualButton.onClick = [this] {
+#if DRIZEL_MAC_SPEECH
+        movementSpeech.cancel();
+#endif
         processor.setMovement({});
         movementStatus.setText("Manual scan active", juce::dontSendNotification);
         applyButton.setEnabled(false);
@@ -112,7 +115,15 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                 return;
             }
             movementStatus.setText("Hold to speak, then release", juce::dontSendNotification);
-            movementSpeech.start([this](juce::String transcript, juce::String message) {
+            applyButton.setEnabled(false);
+            const auto revision = processor.sampleRequestRevision();
+            movementSpeech.start([this, revision](juce::String transcript, juce::String message) {
+                if (revision != processor.sampleRequestRevision())
+                {
+                    movementStatus.setText("Sample changed. Speak or type a new command.",
+                                           juce::dontSendNotification);
+                    return;
+                }
                 if (transcript.isNotEmpty())
                     movementCommand.setText(transcript, false);
                 applyButton.setEnabled(false);
@@ -229,6 +240,11 @@ void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, in
 void DrizelAudioProcessorEditor::timerCallback()
 {
     status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
+    if (applyButton.isEnabled() && previewRevision != processor.sampleRequestRevision())
+    {
+        applyButton.setEnabled(false);
+        movementStatus.setText("Sample or preset changed. Preview again.", juce::dontSendNotification);
+    }
     const auto sample = processor.loadedSampleState();
     if (sample.revision != waveformRevision)
     {
@@ -392,6 +408,10 @@ void DrizelAudioProcessorEditor::choosePreset(bool save)
 
 void DrizelAudioProcessorEditor::previewMovement()
 {
+#if DRIZEL_MAC_SPEECH
+    movementSpeech.cancel();
+#endif
+    const auto revision = processor.sampleRequestRevision();
     using Pattern = drizel::MovementPattern;
     const auto words = juce::StringArray::fromTokens(
         movementCommand.getText().toLowerCase().retainCharacters(
@@ -403,7 +423,11 @@ void DrizelAudioProcessorEditor::previewMovement()
                            || has("irregular") || has("vary") || has("jumps");
     const bool cyclic = has("circle") || has("circles") || has("loop") || has("cyclic")
                         || has("cycle");
-    if ((!stepped && !irregular && !cyclic) || (cyclic && (stepped || irregular)))
+    const bool negated = has("not") || has("never") || has("no") || has("don")
+                         || has("without") || has("avoid");
+    const bool stepSequence = stepped && !irregular && has("forward") && has("back") && has("two");
+    if (negated || (has("then") && !stepSequence) || (!stepped && !irregular && !cyclic)
+        || (cyclic && (stepped || irregular)))
     {
         applyButton.setEnabled(false);
         movementStatus.setText("Try a stepped, chaotic, or looping scan", juce::dontSendNotification);
@@ -422,8 +446,9 @@ void DrizelAudioProcessorEditor::previewMovement()
         const int priorDistance = proposedMovement.distanceVariation;
         const int priorTiming = proposedMovement.timingVariation;
         const bool relative = has("more") && processor.activeMovement().pattern != Pattern::manual;
-        proposedMovement.distanceVariation = relative ? std::min(90, priorDistance + 15) : 30;
-        proposedMovement.timingVariation = relative ? std::min(90, priorTiming + 15) : 30;
+        const int initialVariation = has("little") || has("slightly") || has("subtle") ? 15 : 30;
+        proposedMovement.distanceVariation = relative ? std::min(90, priorDistance + 15) : initialVariation;
+        proposedMovement.timingVariation = relative ? std::min(90, priorTiming + 15) : initialVariation;
     }
     else
     {
@@ -440,6 +465,7 @@ void DrizelAudioProcessorEditor::previewMovement()
     movementStatus.setText(stepped ? (irregular ? "Preview: stepped with variation" : "Preview: stepped")
                                   : irregular ? "Preview: irregular" : "Preview: cyclic",
                            juce::dontSendNotification);
+    previewRevision = revision;
     applyButton.setEnabled(true);
 }
 
@@ -456,6 +482,12 @@ void DrizelAudioProcessorEditor::applyMovement()
     proposedMovement.step = int(movementSettings[3].getValue());
     proposedMovement.distanceVariation = int(movementSettings[4].getValue());
     proposedMovement.timingVariation = int(movementSettings[5].getValue());
-    processor.setMovement(proposedMovement);
+    if (!processor.applyMovementForSample(proposedMovement, previewRevision))
+    {
+        applyButton.setEnabled(false);
+        movementStatus.setText("Sample or preset changed. Preview again.", juce::dontSendNotification);
+        return;
+    }
+    applyButton.setEnabled(false);
     movementStatus.setText("Movement policy active", juce::dontSendNotification);
 }

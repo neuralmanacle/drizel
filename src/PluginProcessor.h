@@ -39,6 +39,9 @@ public:
         return drizel::MovementPolicy::unpack(movementWord.load());
     }
 
+    std::uint64_t sampleRequestRevision();
+    bool applyMovementForSample(drizel::MovementPolicy, std::uint64_t expectedRevision);
+
     void setPanelNote(int note, int velocity) noexcept { panelKeys[static_cast<std::size_t>(note)].store(velocity); }
     int displayedHostNote() const noexcept { return hostKey.load(); }
 
