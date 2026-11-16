@@ -71,5 +71,8 @@ private:
     std::atomic<float>* lfoDepth = nullptr;
     std::atomic<float>* lfoShape = nullptr;
     std::atomic<float>* lfoDestination = nullptr;
+    std::atomic<float>* speechDepth = nullptr;
+    std::atomic<float>* speechTarget = nullptr;
+    float speechEnvelope = 0.0f;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrizelAudioProcessor)
 };
