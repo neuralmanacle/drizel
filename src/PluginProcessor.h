@@ -37,7 +37,8 @@ public:
     float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
     int activeGrainCount() const noexcept { return grainsActive.load(std::memory_order_relaxed); }
     juce::String loadStatus(); // UI thread only; never queried by processBlock.
-    juce::MidiKeyboardState keyboardState; // On-screen MIDI keyboard shares the audio event stream.\n    juce::AudioProcessorValueTreeState parameters; // Automatable controls/state.
+    juce::MidiKeyboardState keyboardState; // On-screen MIDI keyboard shares the audio event stream.
+    juce::AudioProcessorValueTreeState parameters; // Automatable controls/state.
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeParameters();
