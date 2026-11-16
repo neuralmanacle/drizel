@@ -281,6 +281,21 @@ void DrizelAudioProcessorEditor::timerCallback()
     activeGrains = processor.activeGrainCount();
     repaint();
 }
+static std::array<juce::Rectangle<int>,4> controlPanels(juce::Rectangle<int> deck)
+{
+    // One source of truth for panel painting and component placement.
+    constexpr int gap=12;
+    const int usable=deck.getWidth()-3*gap;
+    const std::array<int,4> weights {{340,280,225,279}};
+    constexpr int total=1124;
+    const int a=usable*weights[0]/total;
+    const int b=usable*weights[1]/total;
+    const int c=usable*weights[2]/total;
+    const int d=usable-a-b-c;
+    const int x=deck.getX(),y=deck.getY(),h=deck.getHeight();
+    return {{{x,y,a,h},{x+a+gap,y,b,h},{x+a+b+2*gap,y,c,h},
+             {x+a+b+c+3*gap,y,d,h}}};
+}
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 {
     const auto bg=juce::Colour(ink);
@@ -337,13 +352,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(13.0f);
     g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getRight()-245,waveformBounds.getBottom()+8,230,22,juce::Justification::centredRight);
     // Four physically separate control panels, matching the reference layout.
-    const int y=deckBounds.getY(), height=deckBounds.getHeight();
-    const std::array<juce::Rectangle<int>,4> panels {{
-        {20,y,340,height},
-        {372,y,280,height},
-        {664,y,225,height},
-        {901,y,279,height}
-    }};
+    const auto panels=controlPanels(deckBounds);
     for(const auto& panel:panels)
     {
         g.setColour(juce::Colour(ink).withAlpha(0.20f));
@@ -356,13 +365,18 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     }
     g.setColour(juce::Colour(forest));
     g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
-    for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",4},{"PITCH / VOICE",356},{"ENVELOPE",648},{"MODULATION",885}}})
-        g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
+    const std::array<const char*,4> titles {{"GRAIN ENGINE","PITCH / VOICE","ENVELOPE","MODULATION"}};
+    for(std::size_t i=0;i<panels.size();++i)
+        g.drawText(titles[i],panels[i].getX()+14,panels[i].getY()+14,
+                   panels[i].getWidth()-28,25,juce::Justification::centredLeft);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
-    g.drawText("MODE",390,590,75,18,juce::Justification::centredLeft);
-    g.drawText("SHAPE",915,590,80,18,juce::Justification::centredLeft);
-    g.drawText("TARGET",1050,590,80,18,juce::Justification::centredLeft);
+    for(const auto& pair : std::array<std::pair<const char*,juce::Rectangle<int>>,3> {{
+        {"MODE",modeChoice.getBounds()},{"SHAPE",shapeChoice.getBounds()},
+        {"TARGET",destinationChoice.getBounds()}
+    }})
+        g.drawText(pair.first,pair.second.getX(),pair.second.getY()-23,
+                   pair.second.getWidth(),18,juce::Justification::centredLeft);
     g.setColour(ivory);
     g.drawText("OUTPUT LEVEL",meterBounds.getX()-120,meterBounds.getY()-8,112,22,juce::Justification::centredRight);
     g.setColour(juce::Colour(ink).withAlpha(0.7f));
@@ -386,27 +400,39 @@ void DrizelAudioProcessorEditor::resized()
     selectionChoice.setBounds(205,351,210,34);
 
     deckBounds={20,395,w-40,261};
-    // Each rotary control is positioned inside its own panel, with no cross-panel overlap.
-    const std::array<juce::Rectangle<int>,9> positions {{
-        {47,454,112,119},   // Position: Grain Engine
-        {390,460,88,105},   // Pitch: Pitch / Voice
-        {167,464,83,102},   // Density: Grain Engine
-        {267,464,83,102},   // Output: Grain Engine
-        {925,453,91,106},  // LFO rate: Modulation
-        {1053,453,91,106}, // LFO depth: Modulation
-        {682,460,88,105},  // Attack: Envelope
-        {789,460,88,105},  // Release: Envelope
-        {529,460,88,105}   // Root note: Pitch / Voice
-    }};
-    for(std::size_t i=0;i<sliders.size();++i)
+    const auto panels=controlPanels(deckBounds);
+    // All nine rotary controls share one baseline, value baseline and label baseline.
+    // Centers are evenly distributed within each panel's inner horizontal padding.
+    const auto place=[&](int index,int panel,int column,int count)
     {
-        sliders[i].setBounds(positions[i]);
-        labels[i].setBounds(positions[i].getX()-5,positions[i].getBottom()+2,
-                            positions[i].getWidth()+10,20);
-    }
-    modeChoice.setBounds(390,612,225,34);
-    shapeChoice.setBounds(915,612,120,34);
-    destinationChoice.setBounds(1050,612,120,34);
+        const auto p=panels[(std::size_t)panel];
+        const int innerLeft=p.getX()+18, innerWidth=p.getWidth()-36;
+        const int cx=innerLeft+(innerWidth*(2*column+1))/(2*count);
+        constexpr int knobWidth=94;
+        sliders[(std::size_t)index].setBounds(cx-knobWidth/2,p.getY()+61,knobWidth,105);
+        labels[(std::size_t)index].setBounds(cx-54,p.getY()+170,108,20);
+    };
+    place(0,0,0,3); // Position
+    place(2,0,1,3); // Density
+    place(3,0,2,3); // Output
+    place(1,1,0,2); // Pitch
+    place(8,1,1,2); // Root note
+    place(6,2,0,2); // Attack
+    place(7,2,1,2); // Release
+    place(4,3,0,2); // LFO rate
+    place(5,3,1,2); // LFO depth
+
+    const auto choiceBounds=[&](int panel,int column,int count)
+    {
+        const auto p=panels[(std::size_t)panel];
+        const int margin=18,gap=14;
+        const int width=(p.getWidth()-2*margin-(count-1)*gap)/count;
+        return juce::Rectangle<int>(p.getX()+margin+column*(width+gap),
+                                     p.getY()+221,width,32);
+    };
+    modeChoice.setBounds(choiceBounds(1,0,1));
+    shapeChoice.setBounds(choiceBounds(3,0,2));
+    destinationChoice.setBounds(choiceBounds(3,1,2));
 
     keyboardHeaderBounds={20,672,w-40,64};
     meterBounds={w-220,704,180,8};
