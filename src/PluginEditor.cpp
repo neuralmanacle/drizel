@@ -170,8 +170,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
         s.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
         s.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
-        s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(ink));
-        s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(pearl));
+        s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(mint));
+        s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(ink));
         s.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
         s.setLookAndFeel(&glassLook());
         addAndMakeVisible(s);
