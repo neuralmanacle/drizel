@@ -137,7 +137,6 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
 
 
     addAndMakeVisible(status);
-    addAndMakeVisible(midiHelp);
     addAndMakeVisible(selectionLabel);
 
     addAndMakeVisible(keyboard);
@@ -330,9 +329,6 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
     for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",4},{"PITCH / VOICE",356},{"ENVELOPE",648},{"MODULATION",885}}})
         g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
-    g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.6f),keyboardHeaderBounds.getTopLeft().toFloat(),
-                                           juce::Colour(forest).withAlpha(0.55f),keyboardHeaderBounds.getBottomRight().toFloat(),false));
-    g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
     g.drawText("MODE",390,590,75,18,juce::Justification::centredLeft);
@@ -384,7 +380,6 @@ void DrizelAudioProcessorEditor::resized()
     destinationChoice.setBounds(1050,612,120,34);
 
     keyboardHeaderBounds={20,672,w-40,64};
-    midiHelp.setBounds(30,682,w-360,28);
     meterBounds={w-220,704,180,8};
     keyboard.setBounds(36,750,w-72,158);
     keyboard.setKeyWidth((w-72)/14.0f);
