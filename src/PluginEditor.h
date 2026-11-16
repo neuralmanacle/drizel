@@ -8,6 +8,7 @@ class DrizelAudioProcessorEditor : public juce::AudioProcessorEditor,
 {
 public:
     explicit DrizelAudioProcessorEditor(DrizelAudioProcessor&);
+    ~DrizelAudioProcessorEditor() override;
     void paint(juce::Graphics&) override;
     void resized() override;
     bool isInterestedInFileDrag(const juce::StringArray&) override;
