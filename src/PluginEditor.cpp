@@ -37,6 +37,24 @@ public:
         g.drawLine(from.x,from.y,to.x,to.y,juce::jmax(3.0f,radius*0.075f));
     }
 };
+// Deterministic, allocation-free visual noise. Rendered only by the UI paint callback.
+void drawFineGrain(juce::Graphics& g, juce::Rectangle<int> area, float opacity, int spacing=3)
+{
+    juce::Graphics::ScopedSaveState saved(g);
+    g.reduceClipRegion(area);
+    const int right=area.getRight(), bottom=area.getBottom();
+    for(int y=area.getY();y<bottom;y+=spacing)
+        for(int x=area.getX();x<right;x+=spacing)
+        {
+            const juce::uint32 seed=static_cast<juce::uint32>(x)*73856093u
+                                    ^static_cast<juce::uint32>(y)*19349663u;
+            const juce::uint32 hash=(seed^(seed>>13))*1274126177u;
+            const float intensity=static_cast<float>((hash>>24)&255u)/255.0f;
+            g.setColour((hash&1u?juce::Colours::white:juce::Colours::black)
+                            .withAlpha(opacity*(0.25f+0.75f*intensity)));
+            g.fillRect(x,y,1,1);
+        }
+}
 DrizelGlassLookAndFeel& glassLook() { static DrizelGlassLookAndFeel look; return look; }
 }
 
@@ -219,16 +237,19 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).withAlpha(0.38f),getWidth()*0.8f,0.0f,
                                            juce::Colour(emerald).withAlpha(0.0f),getWidth()*0.2f,getHeight()*0.7f,true));
     g.fillRect(getLocalBounds());
+    drawFineGrain(g,getLocalBounds(),0.11f,3);
     g.setGradientFill(juce::ColourGradient(juce::Colour(pearl).withAlpha(0.35f),headerBounds.getTopLeft().toFloat(),
                                            juce::Colour(ink).withAlpha(0.26f),headerBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(headerBounds.toFloat(),16.0f);
     g.setColour(juce::Colour(pearl).withAlpha(0.48f));
     g.drawRoundedRectangle(headerBounds.toFloat().reduced(0.8f),16.0f,1.4f);
+    drawFineGrain(g,headerBounds.reduced(5),0.10f,3);
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.88f),waveformBounds.getTopLeft().toFloat(),
                                            juce::Colour(forest).withAlpha(0.8f),waveformBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f);
     g.setColour(juce::Colour(pearl).withAlpha(0.4f));
     g.drawRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f,1.2f);
+    drawFineGrain(g,waveformBounds.expanded(7,32),0.16f,3);
     g.setColour(ivory);
     g.setFont(juce::Font(30.0f,juce::Font::bold));
     g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
@@ -267,6 +288,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.fillRoundedRectangle(panel.toFloat(),17.0f);
         g.setColour(juce::Colour(pearl).withAlpha(0.58f));
         g.drawRoundedRectangle(panel.toFloat().reduced(1.0f),17.0f,1.1f);
+        drawFineGrain(g,panel.reduced(5),0.10f,3);
     }
     g.setColour(juce::Colour(forest));
     g.setFont(juce::Font(16.0f,juce::Font::bold));
@@ -275,6 +297,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.6f),keyboardHeaderBounds.getTopLeft().toFloat(),
                                            juce::Colour(forest).withAlpha(0.55f),keyboardHeaderBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
+    drawFineGrain(g,keyboardHeaderBounds.reduced(5),0.13f,3);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
     g.drawText("MODE",405,563,65,16,juce::Justification::centred);
