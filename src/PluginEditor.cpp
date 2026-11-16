@@ -4,58 +4,86 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     : AudioProcessorEditor(p), processor(p)
 {
     formats.registerBasicFormats();
-    addAndMakeVisible(loadButton);
+    for (auto* button : { &loadButton, &saveButton, &presetButton })
+        addAndMakeVisible(*button);
     addAndMakeVisible(playButton);
     addAndMakeVisible(status);
-    addAndMakeVisible(saveButton);
-    addAndMakeVisible(presetButton);
     addAndMakeVisible(midiHelp);
-    midiHelp.setText("MIDI ch 1 | Last note wins | Bend +/-2 | CC1 LFO | CC74 position | CC71 density", juce::dontSendNotification);
+    addAndMakeVisible(selectionLabel);
+    addAndMakeVisible(selection);
+    addAndMakeVisible(keyboardToggle);
+    addAndMakeVisible(keyboard);
+    keyboard.setAvailableRange(36, 96);
+    keyboard.setKeyWidth(30.0f);
+    keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(0xffe8f4ef));
+    keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff0b2026));
+    keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0xff20d6c7));
+    keyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(0xff35bdb5));
+    keyboard.setVisible(false);
+    keyboardToggle.onClick = [this]
+    {
+        keyboardExpanded = !keyboardExpanded;
+        keyboard.setVisible(keyboardExpanded);
+        keyboardToggle.setButtonText(keyboardExpanded ? "MIDI KEYBOARD  ▴" : "MIDI KEYBOARD  ▾");
+        setSize(1200, keyboardExpanded ? 930 : 760);
+    };
+    midiHelp.setText("MIDI CH 1  •  BEND ±2  •  CC1 LFO  •  CC74 POSITION  •  CC71 DENSITY",
+                     juce::dontSendNotification);
     saveButton.onClick = [this] { choosePreset(true); };
     presetButton.onClick = [this] { choosePreset(false); };
-    const char* ids[] = {"position", "pitch", "density", "gain", "lfoRate", "lfoDepth", "attack", "release", "rootNote"};
-    const char* names[] = {"Position", "Pitch / semitones", "Density / grains per second",
-                          "Output gain", "LFO rate / Hz", "LFO depth", "Attack / seconds", "Release / seconds", "Root MIDI note", "LFO shape", "LFO destination", "Mode"};
-    for (std::size_t i = 0; i < labels.size(); ++i)
+    const char* ids[] = {"position","pitch","density","gain","lfoRate","lfoDepth","attack","release","rootNote"};
+    const char* names[] = {"POSITION","PITCH","DENSITY","OUTPUT","LFO RATE","LFO DEPTH","ATTACK","RELEASE","ROOT NOTE","LFO SHAPE","LFO TARGET","PLAY MODE"};
+    for (std::size_t i=0; i<labels.size(); ++i)
     {
         labels[i].setText(names[i], juce::dontSendNotification);
+        labels[i].setJustificationType(juce::Justification::centred);
+        labels[i].setColour(juce::Label::textColourId, juce::Colour(0xff37666b));
         addAndMakeVisible(labels[i]);
     }
-    for (std::size_t i = 0; i < sliders.size(); ++i)
+    for (std::size_t i=0; i<sliders.size(); ++i)
     {
-        sliders[i].setSliderStyle(juce::Slider::LinearHorizontal);
-        sliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 80, 24);
-        addAndMakeVisible(sliders[i]);
-        attachments[i] = std::make_unique<SliderAttachment>(processor.parameters, ids[i], sliders[i]);
+        auto& s=sliders[i];
+        s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 22);
+        s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
+        s.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
+        s.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
+        s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xff0b2026));
+        s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xffe8f4ef));
+        s.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+        addAndMakeVisible(s);
+        attachments[i]=std::make_unique<SliderAttachment>(processor.parameters,ids[i],s);
     }
-    shape.addItemList(juce::StringArray{"Sine", "Triangle"}, 1);
-    destination.addItemList(juce::StringArray{"Off", "Position", "Pitch"}, 1);
-    mode.addItemList(juce::StringArray{"Drone", "MIDI"}, 1);
-    addAndMakeVisible(mode);
-    modeAttachment = std::make_unique<ComboAttachment>(processor.parameters, "midiMode", mode);
-    addAndMakeVisible(shape);
-    addAndMakeVisible(destination);
-    shapeAttachment = std::make_unique<ComboAttachment>(processor.parameters, "lfoShape", shape);
-    destinationAttachment = std::make_unique<ComboAttachment>(processor.parameters, "lfoDestination", destination);
-    playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.parameters, "play", playButton);
-    loadButton.onClick = [this]
+    shape.addItemList(juce::StringArray{"Sine","Triangle"},1);
+    destination.addItemList(juce::StringArray{"Off","Position","Pitch"},1);
+    mode.addItemList(juce::StringArray{"Drone","MIDI"},1);
+    selection.addItemList(juce::StringArray{"Manual","Attack","Sustain","Avoid silence","Bright"},1);
+    for(auto* combo : {&shape,&destination,&mode,&selection})
     {
-        chooser = std::make_unique<juce::FileChooser>("Load a WAV", juce::File{}, "*.wav");
-        auto safe = juce::Component::SafePointer<DrizelAudioProcessorEditor>(this);
+        addAndMakeVisible(*combo);
+        combo->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff20535a));
+        combo->setColour(juce::ComboBox::textColourId, juce::Colour(0xffe8f4ef));
+        combo->setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff37666b));
+    }
+    shapeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoShape",shape);
+    destinationAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoDestination",destination);
+    modeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"midiMode",mode);
+    selectionAttachment=std::make_unique<ComboAttachment>(processor.parameters,"grainSelection",selection);
+    playAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.parameters,"play",playButton);
+    selectionLabel.setText("GRAIN SELECTION",juce::dontSendNotification);
+    selectionLabel.setColour(juce::Label::textColourId,juce::Colour(0xffe8f4ef));
+    loadButton.onClick=[this]
+    {
+        chooser=std::make_unique<juce::FileChooser>("Load a WAV",juce::File{},"*.wav");
+        auto safe=juce::Component::SafePointer<DrizelAudioProcessorEditor>(this);
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [safe](const juce::FileChooser& dialog)
             {
-                if (safe != nullptr && dialog.getResult().existsAsFile())
+                if(safe != nullptr && dialog.getResult().existsAsFile())
                     safe->processor.requestSample(dialog.getResult());
             });
     };
-    selectionLabel.setText("Grain selection", juce::dontSendNotification);
-    selection.addItemList(juce::StringArray{"Manual", "Attack", "Sustain", "Avoid silence", "Bright"}, 1);
-    selection.setTooltip("Guided modes look near the current Position. If there is no match, the grain starts at Position.");
-    addAndMakeVisible(selectionLabel);
-    addAndMakeVisible(selection);
-    selectionAttachment = std::make_unique<ComboAttachment>(processor.parameters, "grainSelection", selection);
-    setSize(760, 814);
+    setSize(1200,760);
     startTimerHz(30);
     timerCallback();
 }
@@ -88,57 +116,79 @@ void DrizelAudioProcessorEditor::timerCallback()
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff161c20));
-    g.setColour(juce::Colour(0xffb7e885));
-    g.setFont(26.0f);
-    g.drawText("DRIZEL", 20, 12, 300, 36, juce::Justification::centredLeft);
-    g.setColour(juce::Colour(0xff24323a));
-    g.fillRect(waveformBounds);
-    g.setColour(juce::Colour(0xffb7e885));
-    if (thumbnail.getTotalLength() > 0.0)
-    {
-        thumbnail.drawChannels(g, waveformBounds.reduced(4), 0.0, thumbnail.getTotalLength(), 1.0f);
-        // Base position marker: modulation may move new-grain starts around it.
-        const float position = processor.parameters.getRawParameterValue("position")->load();
-        const int x = waveformBounds.getX() + juce::roundToInt(position * (waveformBounds.getWidth() - 1));
-        g.setColour(juce::Colours::white);
-        g.drawVerticalLine(x, static_cast<float>(waveformBounds.getY()), static_cast<float>(waveformBounds.getBottom()));
-    }
-    else
-        g.drawText("Drop a WAV here or choose Load WAV", waveformBounds, juce::Justification::centred);
+    const auto bg=juce::Colour(0xff0b2026);
+    const auto surface=juce::Colour(0xff163a40);
+    const auto teal=juce::Colour(0xff5cd9c6);
+    const auto ivory=juce::Colour(0xffe8f4ef);
+    const auto amber=juce::Colour(0xffe5b96b);
+    g.fillAll(bg);
+    g.setColour(surface);
+    g.fillRoundedRectangle(headerBounds.toFloat(),12.0f);
+    g.fillRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),12.0f);
+    g.setColour(ivory);
+    g.setFont(juce::Font(30.0f,juce::Font::bold));
+    g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
     g.setFont(14.0f);
-    g.setColour(juce::Colours::white);
-    g.drawText("Active grains: " + juce::String(activeGrains) + "   |   Marker: base position", 20, 240, 700, 24, juce::Justification::centredLeft);
-    g.setColour(juce::Colour(0xff24323a));
-    g.fillRect(meterBounds);
-    g.setColour(displayedPeak >= 0.99f ? juce::Colours::orange : juce::Colour(0xffb7e885));
-    g.fillRect(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth() * juce::jlimit(0.0f, 1.0f, displayedPeak))));
+    g.drawText("SAMPLE  /  " + processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false),
+               waveformBounds.getX(),waveformBounds.getY()-30,500,25,juce::Justification::centredLeft);
+    g.setColour(teal);
+    if(thumbnail.getTotalLength()>0.0)
+    {
+        thumbnail.drawChannels(g,waveformBounds,0.0,thumbnail.getTotalLength(),1.0f);
+        const float pos=processor.parameters.getRawParameterValue("position")->load();
+        const int x=waveformBounds.getX()+juce::roundToInt(pos*(waveformBounds.getWidth()-1));
+        g.setColour(teal.withAlpha(0.22f));
+        g.fillRoundedRectangle(juce::Rectangle<float>(static_cast<float>(x-32),static_cast<float>(waveformBounds.getY()),64.0f,static_cast<float>(waveformBounds.getHeight())),5.0f);
+        g.setColour(amber);
+        g.drawVerticalLine(x,static_cast<float>(waveformBounds.getY()),static_cast<float>(waveformBounds.getBottom()));
+    }
+    else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
+    g.setColour(ivory);
+    g.setFont(13.0f);
+    g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getX(),waveformBounds.getBottom()+8,240,22,juce::Justification::centredLeft);
+    g.setColour(ivory);
+    g.fillRoundedRectangle(deckBounds.toFloat(),12.0f);
+    g.setColour(juce::Colour(0xff37666b));
+    g.setFont(juce::Font(16.0f,juce::Font::bold));
+    for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",24},{"PITCH / VOICE",370},{"ENVELOPE",680},{"MODULATION",925}}})
+        g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
+    g.setColour(surface);
+    g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
+    g.setColour(juce::Colour(0xff20535a));
+    g.fillRoundedRectangle(meterBounds.toFloat(),4.0f);
+    g.setColour(displayedPeak>=0.99f?amber:teal);
+    g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),4.0f);
 }
 void DrizelAudioProcessorEditor::resized()
 {
-    loadButton.setBounds(285, 16, 100, 32);
-    presetButton.setBounds(395, 16, 110, 32);
-    saveButton.setBounds(515, 16, 110, 32);
-    playButton.setBounds(635, 16, 105, 32);
-    status.setBounds(20, 52, getWidth() - 40, 30);
-    waveformBounds = {20, 90, getWidth() - 40, 140};
-    for (int i = 0; i < 12; ++i)
+    const int w=getWidth();
+    headerBounds={20,16,w-40,70};
+    loadButton.setBounds(w-550,34,100,34);
+    presetButton.setBounds(w-440,34,110,34);
+    saveButton.setBounds(w-320,34,110,34);
+    playButton.setBounds(w-200,34,160,34);
+    status.setBounds(35,94,w-70,25);
+    waveformBounds={46,157,w-92,160};
+    deckBounds={20,378,w-40,278};
+    const std::array<juce::Point<int>,9> pos{{{95,425},{438,435},{238,515},{1085,515},{951,435},{1047,435},{705,435},{805,435},{540,435}}};
+    for(std::size_t i=0;i<sliders.size();++i)
     {
-        const int x = 20 + (i % 2) * 370;
-        const int y = 280 + (i / 2) * 64;
-        labels[static_cast<std::size_t>(i)].setBounds(x, y, 350, 24);
-        auto area = juce::Rectangle<int>(x, y + 26, 350, 32);
-        if (i < 9) sliders[static_cast<std::size_t>(i)].setBounds(area);
-        else if (i == 9) shape.setBounds(area);
-        else if (i == 10) destination.setBounds(area);
-        else mode.setBounds(area);
+        const bool big=i==0;
+        const int sw=big?130:88,sh=big?156:110;
+        sliders[i].setBounds(pos[i].x,pos[i].y,sw,sh);
+        labels[i].setBounds(pos[i].x-5,pos[i].y+sh,sw+10,20);
     }
-    selectionLabel.setBounds(20, 664, 350, 24);
-    selection.setBounds(20, 690, 350, 32);
-    midiHelp.setBounds(20, 744, 720, 30);
-    meterBounds = {20, 784, getWidth() - 40, 16};
+    mode.setBounds(390,592,140,30);
+    shape.setBounds(930,592,100,30);
+    destination.setBounds(1040,592,120,30);
+    selectionLabel.setBounds(30,337,150,25);
+    selection.setBounds(184,337,190,27);
+    midiHelp.setBounds(400,337,w-430,25);
+    keyboardHeaderBounds={20,672,w-40,64};
+    keyboardToggle.setBounds(36,686,220,35);
+    meterBounds={w-220,704,180,8};
+    keyboard.setBounds(36,756,w-72,155);
 }
-
 void DrizelAudioProcessorEditor::choosePreset(bool save)
 {
     chooser = std::make_unique<juce::FileChooser>(save ? "Save Drizel preset" : "Load Drizel preset",
