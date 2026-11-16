@@ -22,9 +22,35 @@ private:
     void timerCallback() override;
     DrizelAudioProcessor& processor;
     juce::TextButton loadButton {"Load WAV"};
-    juce::TextButton playButton {"Pause"};
+    class TransportButton : public juce::TextButton
+    {
+    public:
+        void paintButton(juce::Graphics& g, bool hovered, bool pressed) override
+        {
+            auto area=getLocalBounds().toFloat().reduced(1.0f);
+            g.setColour(juce::Colour(pressed ? 0xff195844 : hovered ? 0xff286f59 : 0xff153e34));
+            g.fillRoundedRectangle(area,9.0f);
+            g.setColour(juce::Colour(0xff93b8a7));
+            g.drawRoundedRectangle(area,9.0f,1.0f);
+            g.setColour(juce::Colours::white);
+            const float cx=area.getCentreX(), cy=area.getCentreY();
+            if(getToggleState())
+            {
+                g.fillRoundedRectangle(cx-9.0f,cy-9.0f,6.0f,18.0f,1.0f);
+                g.fillRoundedRectangle(cx+3.0f,cy-9.0f,6.0f,18.0f,1.0f);
+            }
+            else
+            {
+                juce::Path triangle;
+                triangle.addTriangle(cx-6.0f,cy-10.0f,cx-6.0f,cy+10.0f,cx+11.0f,cy);
+                g.fillPath(triangle);
+            }
+        }
+    };
+    TransportButton playButton;
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
-    juce::Label midiHelp, selectionLabel, selectionDisplay, selectionTicks;
+    juce::Label midiHelp, selectionLabel;
+    juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice;
     juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
     std::array<bool, 13> computerNotesDown {};
     void setWaveformPosition(int x);
@@ -35,13 +61,11 @@ private:
     juce::Label status;
     std::array<juce::Slider, 9> sliders;
     std::array<juce::Label, 12> labels;
-    juce::Slider shapeKnob, destinationKnob, modeKnob;
-    juce::Label shapeDisplay, destinationDisplay, modeDisplay;
-    juce::Slider selectionKnob;
+    
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
-    std::unique_ptr<SliderAttachment> shapeAttachment, destinationAttachment, modeAttachment;
-    std::unique_ptr<SliderAttachment> selectionAttachment;
+    using ChoiceAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+    std::unique_ptr<ChoiceAttachment> shapeAttachment, destinationAttachment, modeAttachment, selectionAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
     juce::AudioFormatManager formats;
     juce::AudioThumbnailCache cache {4};
