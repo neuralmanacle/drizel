@@ -69,7 +69,6 @@ private:
     juce::Rectangle<int> waveformBounds, meterBounds;
     std::uint64_t waveformRevision = 0;
     float displayedPeak = 0.0f;
-    int activeGrains = 0;
     std::unique_ptr<juce::FileChooser> chooser;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrizelAudioProcessorEditor)
 };
