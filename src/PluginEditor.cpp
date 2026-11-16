@@ -332,9 +332,25 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     // Logo asset not yet installed: leave its space clear.
 #endif
     g.drawText("drizel",juce::Rectangle<int>(88,22,180,58),juce::Justification::centredLeft);
-    g.setFont(14.0f);
-    g.drawText("SAMPLE  /  " + processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false),
-               waveformBounds.getX(),waveformBounds.getY()-30,500,25,juce::Justification::centredLeft);
+    // Matching dark analog readouts for the loaded input and active grain count.
+    const auto drawReadout=[&g](juce::Rectangle<int> area,const juce::String& value)
+    {
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff25483a),
+                                               area.getTopLeft().toFloat(),
+                                               juce::Colour(0xff102b25),
+                                               area.getBottomRight().toFloat(),false));
+        g.fillRoundedRectangle(area.toFloat(),6.0f);
+        g.setColour(juce::Colour(0xff86a891));
+        g.drawRoundedRectangle(area.toFloat().reduced(0.6f),6.0f,1.1f);
+        g.setColour(juce::Colour(mint));
+        g.setFont(juce::Font(juce::FontOptions(14.0f)));
+        g.drawFittedText(value,area.reduced(10,2),juce::Justification::centredLeft,1);
+    };
+    const auto sampleName=processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false);
+    drawReadout({waveformBounds.getX(),waveformBounds.getY()-32,310,27},
+                "INPUT  /  " + (sampleName.isEmpty() ? juce::String("No WAV") : sampleName));
+    drawReadout({waveformBounds.getRight()-190,waveformBounds.getY()-32,190,27},
+                "ACTIVE GRAINS  " + juce::String(processor.activeGrainCount()));
     g.setColour(teal);
     if(thumbnail.getTotalLength()>0.0)
     {
