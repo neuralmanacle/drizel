@@ -124,7 +124,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         display.setJustificationType(juce::Justification::centred);
         display.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
         display.setColour(juce::Label::textColourId, juce::Colour(mint));
-        display.setFont(juce::Font(13.0f, juce::Font::bold));
+        display.setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
         addAndMakeVisible(display);
     };
     configureChoice(shapeKnob, shapeDisplay, 1);
@@ -145,7 +145,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     selectionDisplay.setJustificationType(juce::Justification::centred);
     selectionDisplay.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
     selectionDisplay.setColour(juce::Label::textColourId, juce::Colour(mint));
-    selectionDisplay.setFont(juce::Font(17.0f, juce::Font::bold));
+    selectionDisplay.setFont(juce::Font(juce::FontOptions(17.0f, juce::Font::bold)));
     selectionTicks.setText("MAN / ATK / SUS / SIL / BRT",juce::dontSendNotification);
     selectionTicks.setColour(juce::Label::textColourId,juce::Colour(pearl));
     selectionTicks.setJustificationType(juce::Justification::centred);
@@ -251,7 +251,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f,1.2f);
     drawFineGrain(g,waveformBounds.expanded(7,32),0.16f,3);
     g.setColour(ivory);
-    g.setFont(juce::Font(30.0f,juce::Font::bold));
+    g.setFont(juce::Font(juce::FontOptions(30.0f, juce::Font::bold)));
     g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
     g.setFont(14.0f);
     g.drawText("SAMPLE  /  " + processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false),
@@ -291,7 +291,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         drawFineGrain(g,panel.reduced(5),0.10f,3);
     }
     g.setColour(juce::Colour(forest));
-    g.setFont(juce::Font(16.0f,juce::Font::bold));
+    g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
     for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",24},{"PITCH / VOICE",370},{"ENVELOPE",680},{"MODULATION",925}}})
         g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.6f),keyboardHeaderBounds.getTopLeft().toFloat(),
