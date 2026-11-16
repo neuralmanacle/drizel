@@ -18,7 +18,11 @@ private:
     juce::TextButton loadButton {"Load WAV"};
     juce::ToggleButton playButton {"Output on"};
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
-    juce::Label midiHelp, selectionLabel;\n    juce::TextButton keyboardToggle {"MIDI KEYBOARD  ▾"};\n    juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};\n    bool keyboardExpanded = false;\n    juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;
+    juce::Label midiHelp, selectionLabel;
+    juce::TextButton keyboardToggle {"MIDI KEYBOARD  ▾"};
+    juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
+    bool keyboardExpanded = false;
+    juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;
     void choosePreset(bool save);
     juce::String presetStatus;
     juce::Label status;
