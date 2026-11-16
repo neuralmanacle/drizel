@@ -110,6 +110,12 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     startTimerHz(30);
     timerCallback();
 }
+DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
+{
+    for(int i=0;i<13;++i)
+        if(computerNotesDown[static_cast<std::size_t>(i)])
+            processor.keyboardState.noteOff(1,60+i,0.0f);
+}
 bool DrizelAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray& files)
 {
     return files.size() == 1 && juce::File(files[0]).hasFileExtension("wav");
@@ -295,6 +301,9 @@ bool DrizelAudioProcessorEditor::keyPressed(const juce::KeyPress& key, juce::Com
             if(!computerNotesDown[static_cast<std::size_t>(i)])
             {
                 computerNotesDown[static_cast<std::size_t>(i)]=true;
+                // Pressing a computer key switches to instrument mode automatically.
+                if(auto* modeParameter=processor.parameters.getParameter("midiMode"))
+                    modeParameter->setValueNotifyingHost(1.0f);
                 processor.keyboardState.noteOn(1,60+i,0.8f);
             }
             return true;
