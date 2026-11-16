@@ -1,4 +1,7 @@
 #include "PluginEditor.h"
+#if defined(DRIZEL_HAS_NEURAL_MANACLE_LOGO)
+#include <BinaryData.h>
+#endif
 namespace
 {
 constexpr juce::uint32 emerald = 0xff00d879;
@@ -298,24 +301,18 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f,1.2f);
     g.setColour(ivory);
     g.setFont(juce::Font(juce::FontOptions(30.0f, juce::Font::bold)));
-    // Neural Manacle spiral mark, drawn as a compact vector emblem.
-    const juce::Point<float> logoCentre(59.0f,51.0f);
-    for(int arm=0;arm<3;++arm)
+    // Render the supplied PNG itself; preserve the artwork rather than tracing it.
+#if defined(DRIZEL_HAS_NEURAL_MANACLE_LOGO)
     {
-        juce::Path spiral;
-        for(int i=0;i<=70;++i)
-        {
-            const float t=(float)i/70.0f;
-            const float angle=t*juce::MathConstants<float>::twoPi*1.20f
-                              +(float)arm*juce::MathConstants<float>::twoPi/3.0f;
-            const float radius=3.0f+19.0f*t;
-            const auto p=logoCentre+juce::Point<float>(std::cos(angle)*radius,std::sin(angle)*radius);
-            if(i==0) spiral.startNewSubPath(p); else spiral.lineTo(p);
-        }
-        g.setColour(juce::Colour(pearl));
-        g.strokePath(spiral,juce::PathStrokeType(3.6f,juce::PathStrokeType::curved,
-                                                juce::PathStrokeType::rounded));
+        static const juce::Image logo=juce::ImageFileFormat::loadFrom(
+            BinaryData::neural_manacle_logo_png,
+            BinaryData::neural_manacle_logo_pngSize);
+        if(logo.isValid())
+            g.drawImageWithin(logo,34,24,52,52,juce::RectanglePlacement::centred);
     }
+#else
+    // Logo asset not yet installed: leave its space clear.
+#endif
     g.drawText("drizel",juce::Rectangle<int>(88,22,180,58),juce::Justification::centredLeft);
     g.setFont(14.0f);
     g.drawText("SAMPLE  /  " + processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false),
