@@ -11,6 +11,44 @@ constexpr juce::uint32 pearl = 0xfff1fffc;
 class DrizelGlassLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
+    DrizelGlassLookAndFeel()
+    {
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff1a372e));
+        setColour(juce::PopupMenu::textColourId, juce::Colour(0xffe0ebd9));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff557b64));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colour(0xffffd18a));
+        setColour(juce::PopupMenu::headerTextColourId, juce::Colour(0xffb8cfbd));
+    }
+    juce::Font getPopupMenuFont() override
+    {
+        return juce::Font(juce::FontOptions(15.0f));
+    }
+    void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override
+    {
+        const auto area=juce::Rectangle<float>(0.0f,0.0f,(float)width,(float)height);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff344f40),0.0f,0.0f,
+                                               juce::Colour(0xff152d27),0.0f,(float)height,false));
+        g.fillRoundedRectangle(area.reduced(1.0f),9.0f);
+        g.setColour(juce::Colour(0xff9db7a1));
+        g.drawRoundedRectangle(area.reduced(1.5f),9.0f,1.5f);
+        g.setColour(juce::Colour(0xffe7b66d).withAlpha(0.48f));
+        g.drawLine(8.0f,3.0f,(float)width-8.0f,3.0f,1.0f);
+    }
+    void drawComboBox(juce::Graphics& g, int width, int height, bool,
+                      int, int, int, int, juce::ComboBox&) override
+    {
+        const auto area=juce::Rectangle<float>(0.5f,0.5f,(float)width-1.0f,(float)height-1.0f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff25483a),0.0f,0.0f,
+                                               juce::Colour(0xff102b25),0.0f,(float)height,false));
+        g.fillRoundedRectangle(area,6.0f);
+        g.setColour(juce::Colour(0xff86a891));
+        g.drawRoundedRectangle(area.reduced(0.5f),6.0f,1.2f);
+        g.setColour(juce::Colour(0xffe7b66d));
+        juce::Path arrow;
+        const float cx=(float)width-15.0f, cy=(float)height*0.5f;
+        arrow.addTriangle(cx-4.0f,cy-2.0f,cx+4.0f,cy-2.0f,cx,cy+3.0f);
+        g.fillPath(arrow);
+    }
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPos, float startAngle, float endAngle,
                           juce::Slider&) override
@@ -149,6 +187,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         box.setColour(juce::ComboBox::outlineColourId,juce::Colour(0xff729e89));
         box.setColour(juce::ComboBox::arrowColourId,juce::Colour(0xffe7b66d));
         box.setJustificationType(juce::Justification::centred);
+        box.setLookAndFeel(&glassLook());
         addAndMakeVisible(box);
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
@@ -187,6 +226,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
 DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
 {
     for(auto& slider : sliders) slider.setLookAndFeel(nullptr);
+    for(auto* box : { &modeChoice, &shapeChoice, &destinationChoice, &selectionChoice })
+        box->setLookAndFeel(nullptr);
     for(int i=0;i<13;++i)
         if(computerNotesDown[static_cast<std::size_t>(i)])
             processor.keyboardState.noteOff(1,60+i,0.0f);
