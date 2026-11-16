@@ -18,7 +18,7 @@ private:
     juce::TextButton loadButton {"Load WAV"};
     juce::ToggleButton playButton {"Output on"};
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
-    juce::Label midiHelp, selectionLabel;
+    juce::Label midiHelp, selectionLabel, selectionDisplay, selectionTicks;
     juce::TextButton keyboardToggle {"MIDI KEYBOARD  ▾"};
     juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
     bool keyboardExpanded = false;
@@ -28,11 +28,13 @@ private:
     juce::Label status;
     std::array<juce::Slider, 9> sliders;
     std::array<juce::Label, 12> labels;
-    juce::ComboBox shape, destination, mode, selection;
+    juce::ComboBox shape, destination, mode;
+    juce::Slider selectionKnob;
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
-    std::unique_ptr<ComboAttachment> shapeAttachment, destinationAttachment, modeAttachment, selectionAttachment;
+    std::unique_ptr<ComboAttachment> shapeAttachment, destinationAttachment, modeAttachment;
+    std::unique_ptr<SliderAttachment> selectionAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
     juce::AudioFormatManager formats;
     juce::AudioThumbnailCache cache {4};
