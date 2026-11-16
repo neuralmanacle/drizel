@@ -178,6 +178,13 @@ if(DRIZEL_BUILD_PLUGIN)
         COPY_PLUGIN_AFTER_BUILD FALSE)
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
+    # Bundle the original Neural Manacle PNG into the plugin, including AU/VST3.
+    # The asset is optional until it is added to assets/neural_manacle_logo.png.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/neural_manacle_logo.png")
+        juce_add_binary_data(DrizelLogoData SOURCES assets/neural_manacle_logo.png)
+        target_link_libraries(DrizelPlugin PRIVATE DrizelLogoData)
+        target_compile_definitions(DrizelPlugin PRIVATE DRIZEL_HAS_NEURAL_MANACLE_LOGO=1)
+    endif()
     target_link_libraries(DrizelPlugin PRIVATE drizel_core juce::juce_audio_utils)
     target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
