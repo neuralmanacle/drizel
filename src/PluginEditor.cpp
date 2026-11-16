@@ -294,9 +294,9 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
-    g.drawText("MODE",390,579,75,18,juce::Justification::centredLeft);
-    g.drawText("SHAPE",915,579,80,18,juce::Justification::centredLeft);
-    g.drawText("TARGET",1050,579,80,18,juce::Justification::centredLeft);
+    g.drawText("MODE",390,590,75,18,juce::Justification::centredLeft);
+    g.drawText("SHAPE",915,590,80,18,juce::Justification::centredLeft);
+    g.drawText("TARGET",1050,590,80,18,juce::Justification::centredLeft);
     g.setColour(ivory);
     g.drawText("OUTPUT LEVEL",meterBounds.getX()-120,meterBounds.getY()-8,112,22,juce::Justification::centredRight);
     g.setColour(juce::Colour(ink).withAlpha(0.7f));
@@ -338,9 +338,9 @@ void DrizelAudioProcessorEditor::resized()
         labels[i].setBounds(positions[i].getX()-5,positions[i].getBottom()+2,
                             positions[i].getWidth()+10,20);
     }
-    modeChoice.setBounds(390,604,225,34);
-    shapeChoice.setBounds(915,604,120,34);
-    destinationChoice.setBounds(1050,604,120,34);
+    modeChoice.setBounds(390,612,225,34);
+    shapeChoice.setBounds(915,612,120,34);
+    destinationChoice.setBounds(1050,612,120,34);
 
     keyboardHeaderBounds={20,672,w-40,64};
     midiHelp.setBounds(30,682,w-360,28);
