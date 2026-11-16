@@ -20,6 +20,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID{"rootNote", 1}, "Root MIDI note", 0, 127, 60));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"grainSelection", 2},
         "Grain selection", juce::StringArray{"Manual", "Attack", "Sustain", "Avoid silence", "Bright"}, 0));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"speechDepth", 1}, "Speech modulation depth", 0.0f, 1.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"speechTarget", 1}, "Speech modulation target", juce::StringArray{"Off", "Density", "Position", "Pitch"}, 0));
     return layout; // Construction and allocations occur before playback.
 }
 
@@ -43,6 +45,8 @@ DrizelAudioProcessor::DrizelAudioProcessor()
     attack = parameters.getRawParameterValue("attack");
     release = parameters.getRawParameterValue("release");
     rootNote = parameters.getRawParameterValue("rootNote");
+    speechDepth = parameters.getRawParameterValue("speechDepth");
+    speechTarget = parameters.getRawParameterValue("speechTarget");
     startThread(); // No thread creation is deferred into the callback.
 }
 DrizelAudioProcessor::~DrizelAudioProcessor()
@@ -54,6 +58,7 @@ DrizelAudioProcessor::~DrizelAudioProcessor()
 void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     engine.prepare(sampleRate);
+    speechEnvelope = 0.0f;
     instrument.prepare(sampleRate);
     previousMidiMode = midiMode->load() >= 0.5f;
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
@@ -102,6 +107,8 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     auto* left = buffer.getWritePointer(0); // Borrow only for this callback.
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
     float blockPeak = 0.0f;
+    const int speechRoute = static_cast<int>(speechTarget->load());
+    const float speechAmount = speechDepth->load();
     for (int i = 0; i < buffer.getNumSamples(); ++i) // No assumed maximum block size.
     {
         while (event != eventEnd && (*event).samplePosition <= i)
@@ -123,14 +130,21 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         }
         modulation.set(route, std::min(1.0, depth + (useMidi ? instrument.wheel() : 0.0)));
         const auto targets = modulation.apply(useMidi ? instrument.position(pos) : pos, semitones, lfo.next());
-        const auto frame = engine.next(targets.position,
-            targets.pitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
-            useMidi ? instrument.density(grains) : grains, level, selection);
+        const float speechMod = speechEnvelope * speechAmount;
+        const auto speechPosition = juce::jlimit(0.0, 1.0, targets.position + (speechRoute == 2 ? 0.25 * speechMod : 0.0));
+        const auto speechPitch = targets.pitch + (speechRoute == 3 ? 12.0 * speechMod : 0.0);
+        const auto speechDensity = (useMidi ? instrument.density(grains) : grains) * (speechRoute == 1 ? (1.0 + 3.0 * speechMod) : 1.0);
+        const auto frame = engine.next(speechPosition,
+            speechPitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
+            speechDensity, level, selection);
         // Apply the note envelope AFTER the engine's gain smoother: exact silent gate.
         const float amplitude = useMidi ? static_cast<float>(instrument.nextAmplitude()) : 1.0f;
         left[i] = amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
         if (right != nullptr)
             right[i] = amplitude * frame.right;
+        // Envelope follower of the granular speech source; no allocations or locks.
+        const float magnitude = std::abs(left[i]);
+        speechEnvelope += (magnitude > speechEnvelope ? 0.008f : 0.0002f) * (magnitude - speechEnvelope);
         blockPeak = std::max(blockPeak, std::abs(left[i]));
         if (right != nullptr)
             blockPeak = std::max(blockPeak, std::abs(right[i]));
