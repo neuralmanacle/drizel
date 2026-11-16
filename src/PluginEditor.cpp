@@ -113,8 +113,9 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     const auto configureChoice = [this](juce::Slider& knob, juce::Label& display, int maximum)
     {
         knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        knob.setMouseDragSensitivity(105);
+        knob.setMouseDragSensitivity(18); // Discrete choices switch with a short drag.
         knob.setRange(0.0, static_cast<double>(maximum), 1.0);
+        knob.setScrollWheelEnabled(true);
         knob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
         knob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
@@ -134,8 +135,9 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     destinationAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoDestination",destinationKnob);
     modeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"midiMode",modeKnob);
     selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    selectionKnob.setMouseDragSensitivity(105);
+    selectionKnob.setMouseDragSensitivity(35); // ~9 px per selection step.
     selectionKnob.setRange(0.0, 4.0, 1.0);
+    selectionKnob.setScrollWheelEnabled(true);
     selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
     selectionKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
