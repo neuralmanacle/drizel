@@ -11,6 +11,16 @@ constexpr juce::uint32 pearl = 0xfff1fffc;
 class DrizelGlassLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+                              const juce::Colour&, bool hovered, bool down) override
+    {
+        auto bounds=button.getLocalBounds().toFloat().reduced(0.7f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(down ? 0xff416653 : hovered ? 0xff345b49 : 0xff25483a),
+                                               0.0f,0.0f,juce::Colour(0xff102b25),0.0f,bounds.getBottom(),false));
+        g.fillRoundedRectangle(bounds,7.0f);
+        g.setColour(juce::Colour(0xff86a891));
+        g.drawRoundedRectangle(bounds.reduced(0.5f),7.0f,1.1f);
+    }
     DrizelGlassLookAndFeel()
     {
         setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff1a372e));
@@ -129,7 +139,11 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     setOpaque(false);
     formats.registerBasicFormats();
     for (auto* button : { &loadButton, &saveButton, &presetButton })
+    {
         addAndMakeVisible(*button);
+        button->setLookAndFeel(&glassLook());
+        button->setColour(juce::TextButton::textColourOffId,juce::Colour(mint));
+    }
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
 
@@ -225,6 +239,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
 DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
 {
     for(auto& slider : sliders) slider.setLookAndFeel(nullptr);
+    for(auto* button : { &loadButton, &saveButton, &presetButton }) button->setLookAndFeel(nullptr);
     for(auto* box : { &modeChoice, &shapeChoice, &destinationChoice, &selectionChoice })
         box->setLookAndFeel(nullptr);
     for(int i=0;i<13;++i)
@@ -276,11 +291,6 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).withAlpha(0.38f),getWidth()*0.8f,0.0f,
                                            juce::Colour(emerald).withAlpha(0.0f),getWidth()*0.2f,getHeight()*0.7f,true));
     g.fillRect(getLocalBounds());
-    g.setGradientFill(juce::ColourGradient(juce::Colour(pearl).withAlpha(0.35f),headerBounds.getTopLeft().toFloat(),
-                                           juce::Colour(ink).withAlpha(0.26f),headerBounds.getBottomRight().toFloat(),false));
-    g.fillRoundedRectangle(headerBounds.toFloat(),16.0f);
-    g.setColour(juce::Colour(pearl).withAlpha(0.48f));
-    g.drawRoundedRectangle(headerBounds.toFloat().reduced(0.8f),16.0f,1.4f);
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.88f),waveformBounds.getTopLeft().toFloat(),
                                            juce::Colour(forest).withAlpha(0.8f),waveformBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f);
@@ -288,7 +298,25 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f,1.2f);
     g.setColour(ivory);
     g.setFont(juce::Font(juce::FontOptions(30.0f, juce::Font::bold)));
-    g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
+    // Neural Manacle spiral mark, drawn as a compact vector emblem.
+    const juce::Point<float> logoCentre(59.0f,51.0f);
+    for(int arm=0;arm<3;++arm)
+    {
+        juce::Path spiral;
+        for(int i=0;i<=70;++i)
+        {
+            const float t=(float)i/70.0f;
+            const float angle=t*juce::MathConstants<float>::twoPi*1.20f
+                              +(float)arm*juce::MathConstants<float>::twoPi/3.0f;
+            const float radius=3.0f+19.0f*t;
+            const auto p=logoCentre+juce::Point<float>(std::cos(angle)*radius,std::sin(angle)*radius);
+            if(i==0) spiral.startNewSubPath(p); else spiral.lineTo(p);
+        }
+        g.setColour(juce::Colour(pearl));
+        g.strokePath(spiral,juce::PathStrokeType(3.6f,juce::PathStrokeType::curved,
+                                                juce::PathStrokeType::rounded));
+    }
+    g.drawText("drizel",juce::Rectangle<int>(88,22,180,58),juce::Justification::centredLeft);
     g.setFont(14.0f);
     g.drawText("SAMPLE  /  " + processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false),
                waveformBounds.getX(),waveformBounds.getY()-30,500,25,juce::Justification::centredLeft);
