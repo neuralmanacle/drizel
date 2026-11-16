@@ -159,8 +159,12 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(keyboard);
     keyboard.setAvailableRange(48, 71); // Exactly two octaves, C3 through B4.
     keyboard.setKeyWidth(77.0f);
-    keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(pearl));
-    keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(ink));
+    // Match the plugin's mint / forest hardware palette rather than piano black/white.
+    keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(0xffcce9dc));
+    keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff214c40));
+    keyboard.setColour(juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour(0xff6c9e8b));
+    keyboard.setColour(juce::MidiKeyboardComponent::textLabelColourId, juce::Colour(0xff174a3d));
+    keyboard.setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colour(0xff0e3b31));
     keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(mint));
     keyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(cyan));
     keyboard.setVisible(true);
