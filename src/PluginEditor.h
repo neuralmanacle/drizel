@@ -4,7 +4,7 @@
 
 // All components, attachments and thumbnail work belong to the message thread.
 class DrizelAudioProcessorEditor : public juce::AudioProcessorEditor,
-    private juce::Timer, public juce::FileDragAndDropTarget
+    private juce::Timer, public juce::FileDragAndDropTarget, private juce::KeyListener
 {
 public:
     explicit DrizelAudioProcessorEditor(DrizelAudioProcessor&);
@@ -12,6 +12,11 @@ public:
     void resized() override;
     bool isInterestedInFileDrag(const juce::StringArray&) override;
     void filesDropped(const juce::StringArray&, int, int) override;
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseDrag(const juce::MouseEvent&) override;
+    void mouseUp(const juce::MouseEvent&) override;
+    bool keyPressed(const juce::KeyPress&, juce::Component*) override;
+    bool keyStateChanged(bool, juce::Component*) override;
 private:
     void timerCallback() override;
     DrizelAudioProcessor& processor;
@@ -19,21 +24,22 @@ private:
     juce::ToggleButton playButton {"Output on"};
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
     juce::Label midiHelp, selectionLabel, selectionDisplay, selectionTicks;
-    juce::TextButton keyboardToggle {"MIDI KEYBOARD  ▾"};
     juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
-    bool keyboardExpanded = false;
+    std::array<bool, 13> computerNotesDown {};
+    void setWaveformPosition(int x);
+    bool waveformGesture = false;
     juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;
     void choosePreset(bool save);
     juce::String presetStatus;
     juce::Label status;
     std::array<juce::Slider, 9> sliders;
     std::array<juce::Label, 12> labels;
-    juce::ComboBox shape, destination, mode;
+    juce::Slider shapeKnob, destinationKnob, modeKnob;
+    juce::Label shapeDisplay, destinationDisplay, modeDisplay;
     juce::Slider selectionKnob;
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-    using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
-    std::unique_ptr<ComboAttachment> shapeAttachment, destinationAttachment, modeAttachment;
+    std::unique_ptr<SliderAttachment> shapeAttachment, destinationAttachment, modeAttachment;
     std::unique_ptr<SliderAttachment> selectionAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
     juce::AudioFormatManager formats;
