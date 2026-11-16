@@ -15,26 +15,71 @@ public:
                           float sliderPos, float startAngle, float endAngle,
                           juce::Slider&) override
     {
-        // Flat, forest-green hardware knobs based on the Drizel master-plan reference.
-        // Keep the value indicator dynamic while matching the reference's amber tick.
-        const auto bounds=juce::Rectangle<float>(static_cast<float>(x),static_cast<float>(y),
-                                                  static_cast<float>(width),static_cast<float>(height));
-        const auto centre=bounds.getCentre();
-        const float radius=juce::jmin(bounds.getWidth(),bounds.getHeight())*0.43f;
-        const auto outer=juce::Rectangle<float>(centre.x-radius,centre.y-radius,radius*2.0f,radius*2.0f);
-        g.setColour(juce::Colour(0xff819c89));
-        g.fillEllipse(outer);
-        const float inset=juce::jmax(3.0f,radius*0.075f);
-        g.setColour(juce::Colour(0xff2d4438));
-        g.fillEllipse(outer.reduced(inset));
-        const float angle=startAngle+sliderPos*(endAngle-startAngle);
-        const float innerRadius=radius-inset;
-        const auto from=centre+juce::Point<float>(std::sin(angle)*innerRadius*0.57f,
-                                                   -std::cos(angle)*innerRadius*0.57f);
-        const auto to=centre+juce::Point<float>(std::sin(angle)*innerRadius*0.85f,
-                                                 -std::cos(angle)*innerRadius*0.85f);
-        g.setColour(juce::Colour(0xffe7b66d));
-        g.drawLine(from.x,from.y,to.x,to.y,juce::jmax(3.0f,radius*0.075f));
+        // Machined analog-synth knob: knurled edge, brushed cap, recessed
+        // indicator and a calibrated dial. All geometry follows the value.
+        const auto bounds = juce::Rectangle<float>((float)x, (float)y, (float)width, (float)height);
+        const auto centre = bounds.getCentre();
+        const float radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.38f;
+        const float angle = startAngle + sliderPos * (endAngle - startAngle);
+        const auto polar = [centre](float a, float r)
+        {
+            return centre + juce::Point<float>(std::sin(a) * r, -std::cos(a) * r);
+        };
+        const auto disk = [centre](float r)
+        {
+            return juce::Rectangle<float>(centre.x-r, centre.y-r, 2.0f*r, 2.0f*r);
+        };
+
+        // Recessed dial and fine engraved scale marks.
+        g.setColour(juce::Colour(0xff153a32).withAlpha(0.48f));
+        g.fillEllipse(disk(radius * 1.20f));
+        for (int i = 0; i <= 24; ++i)
+        {
+            const float a = startAngle + (endAngle-startAngle) * ((float)i/24.0f);
+            const bool major = (i % 4) == 0;
+            const auto p0 = polar(a, radius * (major ? 1.07f : 1.10f));
+            const auto p1 = polar(a, radius * 1.17f);
+            g.setColour(juce::Colour(0xff365f52).withAlpha(major ? 0.95f : 0.48f));
+            g.drawLine(p0.x,p0.y,p1.x,p1.y,major ? 1.6f : 0.9f);
+        }
+
+        // Soft contact shadow and metallic outer bezel.
+        g.setColour(juce::Colours::black.withAlpha(0.25f));
+        g.fillEllipse(disk(radius).translated(1.5f,2.5f));
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xffbed2bc),polar(-0.65f,radius),
+                                                juce::Colour(0xff4b6c5b),polar(2.3f,radius),false));
+        g.fillEllipse(disk(radius));
+        g.setColour(juce::Colour(0xff213f35));
+        g.fillEllipse(disk(radius * 0.91f));
+
+        // Radial ridges on the edge simulate a grippy, knurled metal skirt.
+        for (int i=0;i<64;++i)
+        {
+            const float a=juce::MathConstants<float>::twoPi * ((float)i/64.0f);
+            const auto p0=polar(a,radius*0.92f),p1=polar(a,radius*0.985f);
+            g.setColour(i%2==0 ? juce::Colour(0xff91aa96) : juce::Colour(0xff476b59));
+            g.drawLine(p0.x,p0.y,p1.x,p1.y,0.9f);
+        }
+
+        // Matte forest-green cap with a restrained directional highlight.
+        const float capRadius=radius*0.82f;
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff426657),
+                                                polar(-0.8f,capRadius),
+                                                juce::Colour(0xff1d342c),
+                                                polar(2.4f,capRadius),false));
+        g.fillEllipse(disk(capRadius));
+        g.setColour(juce::Colour(0xffa4bbaa).withAlpha(0.26f));
+        g.drawEllipse(disk(capRadius).reduced(0.7f),0.9f);
+
+        // Amber inlaid pointer moves with the host-automatable parameter.
+        const auto from=polar(angle,capRadius*0.53f);
+        const auto to=polar(angle,capRadius*0.87f);
+        g.setColour(juce::Colour(0xff100f0b).withAlpha(0.65f));
+        g.drawLine(from.x+0.6f,from.y+0.8f,to.x+0.6f,to.y+0.8f,
+                   juce::jmax(2.6f,radius*0.085f));
+        g.setColour(juce::Colour(0xfff3c57a));
+        g.drawLine(from.x,from.y,to.x,to.y,juce::jmax(2.2f,radius*0.07f));
+
     }
 };
 // Deterministic, allocation-free visual noise. Rendered only by the UI paint callback.
