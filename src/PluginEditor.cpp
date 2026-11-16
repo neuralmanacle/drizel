@@ -78,6 +78,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     {
         auto& s=sliders[i];
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        s.setMouseDragSensitivity(90); // 90 pixels for the full parameter range.
         s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 22);
         s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
         s.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
@@ -94,6 +95,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     const auto configureChoice = [this](juce::Slider& knob, juce::Label& display, int maximum)
     {
         knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        knob.setMouseDragSensitivity(105);
         knob.setRange(0.0, static_cast<double>(maximum), 1.0);
         knob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
@@ -114,6 +116,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     destinationAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoDestination",destinationKnob);
     modeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"midiMode",modeKnob);
     selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    selectionKnob.setMouseDragSensitivity(105);
     selectionKnob.setRange(0.0, 4.0, 1.0);
     selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
@@ -247,11 +250,24 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(ivory);
     g.setFont(13.0f);
     g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getX(),waveformBounds.getBottom()+8,240,22,juce::Justification::centredLeft);
-    g.setGradientFill(juce::ColourGradient(juce::Colour(pearl).withAlpha(0.94f),deckBounds.getTopLeft().toFloat(),
-                                           juce::Colour(0xffa5f9db).withAlpha(0.95f),deckBounds.getBottomRight().toFloat(),false));
-    g.fillRoundedRectangle(deckBounds.toFloat(),18.0f);
-    g.setColour(juce::Colour(pearl).withAlpha(0.8f));
-    g.drawRoundedRectangle(deckBounds.toFloat().reduced(1.0f),18.0f,1.5f);
+    // Four physically separate control panels, matching the reference layout.
+    const int y=deckBounds.getY(), height=deckBounds.getHeight();
+    const std::array<juce::Rectangle<int>,4> panels {{
+        {deckBounds.getX(),y,345,height},
+        {deckBounds.getX()+357,y,296,height},
+        {deckBounds.getX()+665,y,238,height},
+        {deckBounds.getX()+915,y,245,height}
+    }};
+    for(const auto& panel:panels)
+    {
+        g.setColour(juce::Colour(ink).withAlpha(0.20f));
+        g.fillRoundedRectangle(panel.translated(0,4).toFloat(),17.0f);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xffe2e7d8),panel.getTopLeft().toFloat(),
+                                               juce::Colour(0xffc5ddcf),panel.getBottomRight().toFloat(),false));
+        g.fillRoundedRectangle(panel.toFloat(),17.0f);
+        g.setColour(juce::Colour(pearl).withAlpha(0.58f));
+        g.drawRoundedRectangle(panel.toFloat().reduced(1.0f),17.0f,1.1f);
+    }
     g.setColour(juce::Colour(forest));
     g.setFont(juce::Font(16.0f,juce::Font::bold));
     for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",24},{"PITCH / VOICE",370},{"ENVELOPE",680},{"MODULATION",925}}})
