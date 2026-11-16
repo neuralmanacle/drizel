@@ -278,7 +278,6 @@ void DrizelAudioProcessorEditor::timerCallback()
         }
     }
     displayedPeak = std::max(processor.outputPeak(), displayedPeak * 0.9f);
-    activeGrains = processor.activeGrainCount();
     repaint();
 }
 static std::array<juce::Rectangle<int>,4> controlPanels(juce::Rectangle<int> deck)
@@ -350,7 +349,6 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
     g.setColour(ivory);
     g.setFont(13.0f);
-    g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getRight()-245,waveformBounds.getBottom()+8,230,22,juce::Justification::centredRight);
     // Four physically separate control panels, matching the reference layout.
     const auto panels=controlPanels(deckBounds);
     for(const auto& panel:panels)
