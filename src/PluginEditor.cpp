@@ -92,6 +92,11 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     for (auto* button : { &loadButton, &saveButton, &presetButton })
         addAndMakeVisible(*button);
     addAndMakeVisible(playButton);
+    playButton.setClickingTogglesState(true);
+    playButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff153e34));
+    playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff276b56));
+    playButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     addAndMakeVisible(status);
     addAndMakeVisible(midiHelp);
     addAndMakeVisible(selectionLabel);
@@ -226,7 +231,7 @@ void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, in
 void DrizelAudioProcessorEditor::timerCallback()
 {
     status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
-    playButton.setButtonText(playButton.getToggleState() ? "❚❚  Pause" : "▶  Play");
+    playButton.setButtonText(playButton.getToggleState() ? "Pause" : "Play");
     const auto sample = processor.loadedSampleState();
     if (sample.revision != waveformRevision)
     {
@@ -297,14 +302,14 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
     g.setColour(ivory);
     g.setFont(13.0f);
-    g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getX(),waveformBounds.getBottom()+8,240,22,juce::Justification::centredLeft);
+    g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getRight()-245,waveformBounds.getBottom()+8,230,22,juce::Justification::centredRight);
     // Four physically separate control panels, matching the reference layout.
     const int y=deckBounds.getY(), height=deckBounds.getHeight();
     const std::array<juce::Rectangle<int>,4> panels {{
-        {deckBounds.getX(),y,345,height},
-        {deckBounds.getX()+357,y,296,height},
-        {deckBounds.getX()+665,y,238,height},
-        {deckBounds.getX()+915,y,245,height}
+        {20,y,340,height},
+        {372,y,280,height},
+        {664,y,225,height},
+        {901,y,279,height}
     }};
     for(const auto& panel:panels)
     {
@@ -318,16 +323,18 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     }
     g.setColour(juce::Colour(forest));
     g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
-    for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",24},{"PITCH / VOICE",370},{"ENVELOPE",680},{"MODULATION",925}}})
+    for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",4},{"PITCH / VOICE",356},{"ENVELOPE",648},{"MODULATION",885}}})
         g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.6f),keyboardHeaderBounds.getTopLeft().toFloat(),
                                            juce::Colour(forest).withAlpha(0.55f),keyboardHeaderBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
-    g.drawText("MODE",405,563,65,16,juce::Justification::centred);
-    g.drawText("SHAPE",890,563,65,16,juce::Justification::centred);
-    g.drawText("TARGET",1044,563,65,16,juce::Justification::centred);
+    g.drawText("MODE",397,565,70,16,juce::Justification::centred);
+    g.drawText("SHAPE",915,565,65,16,juce::Justification::centred);
+    g.drawText("TARGET",1048,565,65,16,juce::Justification::centred);
+    g.setColour(ivory);
+    g.drawText("OUTPUT LEVEL",meterBounds.getX()-120,meterBounds.getY()-8,112,22,juce::Justification::centredRight);
     g.setColour(juce::Colour(ink).withAlpha(0.7f));
     g.fillRoundedRectangle(meterBounds.toFloat(),4.0f);
     g.setColour(displayedPeak>=0.99f?ivory:teal);
@@ -340,31 +347,44 @@ void DrizelAudioProcessorEditor::resized()
     loadButton.setBounds(w-550,34,100,34);
     presetButton.setBounds(w-440,34,110,34);
     saveButton.setBounds(w-320,34,110,34);
-    playButton.setBounds(w-200,34,160,34);
+    playButton.setBounds(w-190,34,150,34);
     status.setBounds(35,94,w-70,25);
     waveformBounds={46,157,w-92,160};
-    deckBounds={20,378,w-40,278};
-    const std::array<juce::Point<int>,9> pos{{{95,425},{438,435},{238,515},{1085,515},{951,435},{1047,435},{705,435},{805,435},{540,435}}};
+
+    // Dedicated selector strip, fully outside the waveform and control panels.
+    selectionLabel.setBounds(40,342,145,24);
+    selectionKnob.setBounds(187,333,48,48);
+    selectionTicks.setBounds(245,341,238,24);
+    selectionDisplay.setBounds(505,337,185,32);
+
+    deckBounds={20,395,w-40,261};
+    // Each rotary control is positioned inside its own panel, with no cross-panel overlap.
+    const std::array<juce::Rectangle<int>,9> positions {{
+        {47,454,112,119},   // Position: Grain Engine
+        {390,460,88,105},   // Pitch: Pitch / Voice
+        {167,464,83,102},   // Density: Grain Engine
+        {267,464,83,102},   // Output: Grain Engine
+        {925,453,91,106},  // LFO rate: Modulation
+        {1053,453,91,106}, // LFO depth: Modulation
+        {682,460,88,105},  // Attack: Envelope
+        {789,460,88,105},  // Release: Envelope
+        {529,460,88,105}   // Root note: Pitch / Voice
+    }};
     for(std::size_t i=0;i<sliders.size();++i)
     {
-        const bool big=i==0;
-        const int sw=big?130:88,sh=big?156:110;
-        sliders[i].setBounds(pos[i].x,pos[i].y,sw,sh);
-        labels[i].setBounds(pos[i].x-5,pos[i].y+sh,sw+10,20);
+        sliders[i].setBounds(positions[i]);
+        labels[i].setBounds(positions[i].getX()-5,positions[i].getBottom()+2,
+                            positions[i].getWidth()+10,20);
     }
-    modeKnob.setBounds(405,579,62,62);
-    modeDisplay.setBounds(470,592,95,32);
-    shapeKnob.setBounds(890,579,62,62);
-    shapeDisplay.setBounds(949,592,94,32);
-    destinationKnob.setBounds(1044,579,62,62);
-    destinationDisplay.setBounds(1104,592,77,32);
-    selectionLabel.setBounds(30,337,150,25);
-    selectionKnob.setBounds(185,324,54,54);
-    selectionTicks.setBounds(248,343,260,25);
-    selectionDisplay.setBounds(518,332,200,37);
-    midiHelp.setBounds(730,337,w-760,25);
+    modeKnob.setBounds(401,585,54,54);
+    modeDisplay.setBounds(466,593,105,34);
+    shapeKnob.setBounds(922,585,54,54);
+    shapeDisplay.setBounds(979,593,67,34);
+    destinationKnob.setBounds(1050,585,54,54);
+    destinationDisplay.setBounds(1107,593,66,34);
+
     keyboardHeaderBounds={20,672,w-40,64};
-    midiHelp.setBounds(30,682,w-260,28);
+    midiHelp.setBounds(30,682,w-360,28);
     meterBounds={w-220,704,180,8};
     keyboard.setBounds(36,750,w-72,158);
 }
