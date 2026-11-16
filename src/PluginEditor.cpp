@@ -13,7 +13,6 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(selectionKnob);
     addAndMakeVisible(selectionDisplay);
     addAndMakeVisible(selectionTicks);
-    addAndMakeVisible(keyboardToggle);
     addAndMakeVisible(keyboard);
     keyboard.setAvailableRange(36, 96);
     keyboard.setKeyWidth(30.0f);
@@ -21,14 +20,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff0b2026));
     keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0xff20d6c7));
     keyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(0xff35bdb5));
-    keyboard.setVisible(false);
-    keyboardToggle.onClick = [this]
-    {
-        keyboardExpanded = !keyboardExpanded;
-        keyboard.setVisible(keyboardExpanded);
-        keyboardToggle.setButtonText(keyboardExpanded ? "MIDI KEYBOARD  ▴" : "MIDI KEYBOARD  ▾");
-        setSize(1200, keyboardExpanded ? 930 : 760);
-    };
+    keyboard.setVisible(true);
     midiHelp.setText("MIDI CH 1  •  BEND ±2  •  CC1 LFO  •  CC74 POSITION  •  CC71 DENSITY",
                      juce::dontSendNotification);
     saveButton.onClick = [this] { choosePreset(true); };
@@ -56,20 +48,29 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(s);
         attachments[i]=std::make_unique<SliderAttachment>(processor.parameters,ids[i],s);
     }
-    shape.addItemList(juce::StringArray{"Sine","Triangle"},1);
-    destination.addItemList(juce::StringArray{"Off","Position","Pitch"},1);
-    mode.addItemList(juce::StringArray{"Drone","MIDI"},1);
 
-    for(auto* combo : {&shape,&destination,&mode})
+    // Discrete, host-automatable knobs replace the three combo boxes.
+    const auto configureChoice = [this](juce::Slider& knob, juce::Label& display, int maximum)
     {
-        addAndMakeVisible(*combo);
-        combo->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff20535a));
-        combo->setColour(juce::ComboBox::textColourId, juce::Colour(0xffe8f4ef));
-        combo->setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff37666b));
-    }
-    shapeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoShape",shape);
-    destinationAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoDestination",destination);
-    modeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"midiMode",mode);
+        knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        knob.setRange(0.0, static_cast<double>(maximum), 1.0);
+        knob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
+        knob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
+        knob.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
+        addAndMakeVisible(knob);
+        display.setJustificationType(juce::Justification::centred);
+        display.setColour(juce::Label::backgroundColourId, juce::Colour(0xff102a3a));
+        display.setColour(juce::Label::textColourId, juce::Colour(0xff20d6c7));
+        display.setFont(juce::Font(13.0f, juce::Font::bold));
+        addAndMakeVisible(display);
+    };
+    configureChoice(shapeKnob, shapeDisplay, 1);
+    configureChoice(destinationKnob, destinationDisplay, 2);
+    configureChoice(modeKnob, modeDisplay, 1);
+    shapeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoShape",shapeKnob);
+    destinationAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoDestination",destinationKnob);
+    modeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"midiMode",modeKnob);
     selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     selectionKnob.setRange(0.0, 4.0, 1.0);
     selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -98,7 +99,14 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                     safe->processor.requestSample(dialog.getResult());
             });
     };
-    setSize(1200,760);
+    // Keyboard note shortcuts are observed even while a knob or button has focus.
+    setWantsKeyboardFocus(true);
+    addKeyListener(this);
+    for (int i = 0; i < getNumChildComponents(); ++i)
+        getChildComponent(i)->addKeyListener(this);
+    midiHelp.setText("KEYS: A W S E D F T G Y H U J K  |  MIDI CH 1  |  CLICK WAVEFORM TO SET POSITION",
+                     juce::dontSendNotification);
+    setSize(1200,930);
     startTimerHz(30);
     timerCallback();
 }
@@ -130,6 +138,14 @@ void DrizelAudioProcessorEditor::timerCallback()
     const int selected=juce::jlimit(0,4,static_cast<int>(std::lround(processor.parameters.getRawParameterValue("grainSelection")->load())));
     static const char* modes[]={"MANUAL","ATTACK","SUSTAIN","AVOID SILENCE","BRIGHT"};
     selectionDisplay.setText(modes[selected],juce::dontSendNotification);
+    const auto choiceIndex = [this](const char* id, int maxValue)
+    {
+        return juce::jlimit(0,maxValue,static_cast<int>(std::lround(processor.parameters.getRawParameterValue(id)->load())));
+    };
+    shapeDisplay.setText(choiceIndex("lfoShape",1)==0?"SINE":"TRIANGLE",juce::dontSendNotification);
+    static const char* targets[]={"OFF","POSITION","PITCH"};
+    destinationDisplay.setText(targets[choiceIndex("lfoDestination",2)],juce::dontSendNotification);
+    modeDisplay.setText(choiceIndex("midiMode",1)==0?"DRONE":"MIDI",juce::dontSendNotification);
     repaint();
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
@@ -172,6 +188,11 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
     g.setColour(surface);
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
+    g.setColour(juce::Colour(0xff37666b));
+    g.setFont(11.0f);
+    g.drawText("MODE",405,563,65,16,juce::Justification::centred);
+    g.drawText("SHAPE",890,563,65,16,juce::Justification::centred);
+    g.drawText("TARGET",1044,563,65,16,juce::Justification::centred);
     g.setColour(juce::Colour(0xff20535a));
     g.fillRoundedRectangle(meterBounds.toFloat(),4.0f);
     g.setColour(displayedPeak>=0.99f?amber:teal);
@@ -196,18 +217,21 @@ void DrizelAudioProcessorEditor::resized()
         sliders[i].setBounds(pos[i].x,pos[i].y,sw,sh);
         labels[i].setBounds(pos[i].x-5,pos[i].y+sh,sw+10,20);
     }
-    mode.setBounds(390,592,140,30);
-    shape.setBounds(930,592,100,30);
-    destination.setBounds(1040,592,120,30);
+    modeKnob.setBounds(405,579,62,62);
+    modeDisplay.setBounds(470,592,95,32);
+    shapeKnob.setBounds(890,579,62,62);
+    shapeDisplay.setBounds(949,592,94,32);
+    destinationKnob.setBounds(1044,579,62,62);
+    destinationDisplay.setBounds(1104,592,77,32);
     selectionLabel.setBounds(30,337,150,25);
     selectionKnob.setBounds(185,324,54,54);
     selectionTicks.setBounds(248,343,260,25);
     selectionDisplay.setBounds(518,332,200,37);
     midiHelp.setBounds(730,337,w-760,25);
     keyboardHeaderBounds={20,672,w-40,64};
-    keyboardToggle.setBounds(36,686,220,35);
+    midiHelp.setBounds(30,682,w-260,28);
     meterBounds={w-220,704,180,8};
-    keyboard.setBounds(36,756,w-72,155);
+    keyboard.setBounds(36,750,w-72,158);
 }
 void DrizelAudioProcessorEditor::choosePreset(bool save)
 {
@@ -226,4 +250,66 @@ void DrizelAudioProcessorEditor::choosePreset(bool save)
         const bool ok = save ? safe->processor.savePreset(file) : safe->processor.loadPreset(file);
         safe->presetStatus = ok ? (save ? " | Preset saved" : " | Preset recalled") : " | Preset failed";
     });
+}
+
+void DrizelAudioProcessorEditor::setWaveformPosition(int x)
+{
+    const float normalized=juce::jlimit(0.0f,1.0f,
+        static_cast<float>(x-waveformBounds.getX()) /
+        static_cast<float>(juce::jmax(1,waveformBounds.getWidth()-1)));
+    if(auto* parameter=processor.parameters.getParameter("position"))
+        parameter->setValueNotifyingHost(normalized);
+}
+void DrizelAudioProcessorEditor::mouseDown(const juce::MouseEvent& e)
+{
+    if(waveformBounds.contains(e.getPosition()))
+    {
+        if(auto* parameter=processor.parameters.getParameter("position"))
+            parameter->beginChangeGesture();
+        waveformGesture=true;
+        setWaveformPosition(e.x);
+    }
+}
+void DrizelAudioProcessorEditor::mouseDrag(const juce::MouseEvent& e)
+{
+    if(waveformGesture) setWaveformPosition(e.x);
+}
+void DrizelAudioProcessorEditor::mouseUp(const juce::MouseEvent& e)
+{
+    if(waveformGesture)
+    {
+        setWaveformPosition(e.x);
+        if(auto* parameter=processor.parameters.getParameter("position"))
+            parameter->endChangeGesture();
+        waveformGesture=false;
+    }
+}
+bool DrizelAudioProcessorEditor::keyPressed(const juce::KeyPress& key, juce::Component*)
+{
+    // Piano mapping: A=C4, W=C#4, S=D4, E=D#4 ... K=C5.
+    static constexpr char keys[]="awsedftgyhujk";
+    const auto character=juce::CharacterFunctions::toLowerCase(key.getTextCharacter());
+    for(int i=0;i<13;++i)
+        if(character==keys[i])
+        {
+            if(!computerNotesDown[static_cast<std::size_t>(i)])
+            {
+                computerNotesDown[static_cast<std::size_t>(i)]=true;
+                processor.keyboardState.noteOn(1,60+i,0.8f);
+            }
+            return true;
+        }
+    return false;
+}
+bool DrizelAudioProcessorEditor::keyStateChanged(bool,juce::Component*)
+{
+    static constexpr char keys[]="awsedftgyhujk";
+    for(int i=0;i<13;++i)
+        if(computerNotesDown[static_cast<std::size_t>(i)] &&
+           !juce::KeyPress::isKeyCurrentlyDown(static_cast<int>(keys[i])))
+        {
+            computerNotesDown[static_cast<std::size_t>(i)]=false;
+            processor.keyboardState.noteOff(1,60+i,0.8f);
+        }
+    return false;
 }
