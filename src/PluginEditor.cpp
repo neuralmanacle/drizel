@@ -88,24 +88,23 @@ DrizelGlassLookAndFeel& glassLook() { static DrizelGlassLookAndFeel look; return
 DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     : AudioProcessorEditor(p), processor(p)
 {
+    setOpaque(false);
     formats.registerBasicFormats();
     for (auto* button : { &loadButton, &saveButton, &presetButton })
         addAndMakeVisible(*button);
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff153e34));
-    playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff276b56));
-    playButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-    playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+
+
+
+
     addAndMakeVisible(status);
     addAndMakeVisible(midiHelp);
     addAndMakeVisible(selectionLabel);
-    addAndMakeVisible(selectionKnob);
-    addAndMakeVisible(selectionDisplay);
-    addAndMakeVisible(selectionTicks);
+
     addAndMakeVisible(keyboard);
-    keyboard.setAvailableRange(36, 96);
-    keyboard.setKeyWidth(30.0f);
+    keyboard.setAvailableRange(48, 71); // Exactly two octaves, C3 through B4.
+    keyboard.setKeyWidth(77.0f);
     keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(pearl));
     keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(ink));
     keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(mint));
@@ -141,48 +140,25 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         attachments[i]=std::make_unique<SliderAttachment>(processor.parameters,ids[i],s);
     }
 
-    // Discrete, host-automatable knobs replace the three combo boxes.
-    const auto configureChoice = [this](juce::Slider& knob, juce::Label& display, int maximum)
+    // Hardware-style digital selection screens: click to choose an exact value.
+    const auto configureChoice=[this](juce::ComboBox& box, const juce::StringArray& items)
     {
-        knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        knob.setMouseDragSensitivity(18); // Discrete choices switch with a short drag.
-        knob.setRange(0.0, static_cast<double>(maximum), 1.0);
-        knob.setScrollWheelEnabled(true);
-        knob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
-        knob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
-        knob.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
-        knob.setLookAndFeel(&glassLook());
-        addAndMakeVisible(knob);
-        display.setJustificationType(juce::Justification::centred);
-        display.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
-        display.setColour(juce::Label::textColourId, juce::Colour(mint));
-        display.setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
-        addAndMakeVisible(display);
+        for(int i=0;i<items.size();++i) box.addItem(items[i],i+1);
+        box.setColour(juce::ComboBox::backgroundColourId,juce::Colour(ink));
+        box.setColour(juce::ComboBox::textColourId,juce::Colour(mint));
+        box.setColour(juce::ComboBox::outlineColourId,juce::Colour(0xff729e89));
+        box.setColour(juce::ComboBox::arrowColourId,juce::Colour(0xffe7b66d));
+        box.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(box);
     };
-    configureChoice(shapeKnob, shapeDisplay, 1);
-    configureChoice(destinationKnob, destinationDisplay, 2);
-    configureChoice(modeKnob, modeDisplay, 1);
-    shapeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoShape",shapeKnob);
-    destinationAttachment=std::make_unique<SliderAttachment>(processor.parameters,"lfoDestination",destinationKnob);
-    modeAttachment=std::make_unique<SliderAttachment>(processor.parameters,"midiMode",modeKnob);
-    selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    selectionKnob.setMouseDragSensitivity(35); // ~9 px per selection step.
-    selectionKnob.setRange(0.0, 4.0, 1.0);
-    selectionKnob.setScrollWheelEnabled(true);
-    selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
-    selectionKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
-    selectionKnob.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
-    selectionKnob.setLookAndFeel(&glassLook());
-    selectionAttachment=std::make_unique<SliderAttachment>(processor.parameters,"grainSelection",selectionKnob);
-    selectionDisplay.setJustificationType(juce::Justification::centred);
-    selectionDisplay.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
-    selectionDisplay.setColour(juce::Label::textColourId, juce::Colour(mint));
-    selectionDisplay.setFont(juce::Font(juce::FontOptions(17.0f, juce::Font::bold)));
-    selectionTicks.setText("MAN / ATK / SUS / SIL / BRT",juce::dontSendNotification);
-    selectionTicks.setColour(juce::Label::textColourId,juce::Colour(pearl));
-    selectionTicks.setJustificationType(juce::Justification::centred);
+    configureChoice(modeChoice,{"Drone","MIDI"});
+    configureChoice(shapeChoice,{"Sine","Triangle"});
+    configureChoice(destinationChoice,{"Off","Position","Pitch"});
+    configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
+    modeAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"midiMode",modeChoice);
+    shapeAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"lfoShape",shapeChoice);
+    destinationAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"lfoDestination",destinationChoice);
+    selectionAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"grainSelection",selectionChoice);
     playAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.parameters,"play",playButton);
     selectionLabel.setText("GRAIN SELECTION",juce::dontSendNotification);
     selectionLabel.setColour(juce::Label::textColourId,juce::Colour(pearl));
@@ -211,10 +187,6 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
 DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
 {
     for(auto& slider : sliders) slider.setLookAndFeel(nullptr);
-    shapeKnob.setLookAndFeel(nullptr);
-    destinationKnob.setLookAndFeel(nullptr);
-    modeKnob.setLookAndFeel(nullptr);
-    selectionKnob.setLookAndFeel(nullptr);
     for(int i=0;i<13;++i)
         if(computerNotesDown[static_cast<std::size_t>(i)])
             processor.keyboardState.noteOff(1,60+i,0.0f);
@@ -231,7 +203,7 @@ void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, in
 void DrizelAudioProcessorEditor::timerCallback()
 {
     status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
-    playButton.setButtonText(playButton.getToggleState() ? "Pause" : "Play");
+    playButton.repaint();
     const auto sample = processor.loadedSampleState();
     if (sample.revision != waveformRevision)
     {
@@ -245,17 +217,6 @@ void DrizelAudioProcessorEditor::timerCallback()
     }
     displayedPeak = std::max(processor.outputPeak(), displayedPeak * 0.9f);
     activeGrains = processor.activeGrainCount();
-    const int selected=juce::jlimit(0,4,static_cast<int>(std::lround(processor.parameters.getRawParameterValue("grainSelection")->load())));
-    static const char* modes[]={"MANUAL","ATTACK","SUSTAIN","AVOID SILENCE","BRIGHT"};
-    selectionDisplay.setText(modes[selected],juce::dontSendNotification);
-    const auto choiceIndex = [this](const char* id, int maxValue)
-    {
-        return juce::jlimit(0,maxValue,static_cast<int>(std::lround(processor.parameters.getRawParameterValue(id)->load())));
-    };
-    shapeDisplay.setText(choiceIndex("lfoShape",1)==0?"SINE":"TRIANGLE",juce::dontSendNotification);
-    static const char* targets[]={"OFF","POSITION","PITCH"};
-    destinationDisplay.setText(targets[choiceIndex("lfoDestination",2)],juce::dontSendNotification);
-    modeDisplay.setText(choiceIndex("midiMode",1)==0?"DRONE":"MIDI",juce::dontSendNotification);
     repaint();
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
@@ -268,6 +229,9 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setGradientFill(juce::ColourGradient(juce::Colour(0xff008f63),0.0f,0.0f,
                                            juce::Colour(0xff00d8bb),static_cast<float>(getWidth()),
                                            static_cast<float>(getHeight()),false));
+    juce::Path roundedFrame;
+    roundedFrame.addRoundedRectangle(getLocalBounds().toFloat(),22.0f);
+    g.reduceClipRegion(roundedFrame);
     g.fillAll();
     g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).withAlpha(0.38f),getWidth()*0.8f,0.0f,
                                            juce::Colour(emerald).withAlpha(0.0f),getWidth()*0.2f,getHeight()*0.7f,true));
@@ -330,9 +294,9 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
     g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
-    g.drawText("MODE",397,565,70,16,juce::Justification::centred);
-    g.drawText("SHAPE",915,565,65,16,juce::Justification::centred);
-    g.drawText("TARGET",1048,565,65,16,juce::Justification::centred);
+    g.drawText("MODE",390,579,75,18,juce::Justification::centredLeft);
+    g.drawText("SHAPE",915,579,80,18,juce::Justification::centredLeft);
+    g.drawText("TARGET",1050,579,80,18,juce::Justification::centredLeft);
     g.setColour(ivory);
     g.drawText("OUTPUT LEVEL",meterBounds.getX()-120,meterBounds.getY()-8,112,22,juce::Justification::centredRight);
     g.setColour(juce::Colour(ink).withAlpha(0.7f));
@@ -353,9 +317,7 @@ void DrizelAudioProcessorEditor::resized()
 
     // Dedicated selector strip, fully outside the waveform and control panels.
     selectionLabel.setBounds(40,356,145,24);
-    selectionKnob.setBounds(187,345,48,48);
-    selectionTicks.setBounds(245,356,238,24);
-    selectionDisplay.setBounds(505,352,185,32);
+    selectionChoice.setBounds(205,351,210,34);
 
     deckBounds={20,395,w-40,261};
     // Each rotary control is positioned inside its own panel, with no cross-panel overlap.
@@ -376,17 +338,15 @@ void DrizelAudioProcessorEditor::resized()
         labels[i].setBounds(positions[i].getX()-5,positions[i].getBottom()+2,
                             positions[i].getWidth()+10,20);
     }
-    modeKnob.setBounds(401,585,54,54);
-    modeDisplay.setBounds(466,593,105,34);
-    shapeKnob.setBounds(922,585,54,54);
-    shapeDisplay.setBounds(979,593,67,34);
-    destinationKnob.setBounds(1050,585,54,54);
-    destinationDisplay.setBounds(1107,593,66,34);
+    modeChoice.setBounds(390,604,225,34);
+    shapeChoice.setBounds(915,604,120,34);
+    destinationChoice.setBounds(1050,604,120,34);
 
     keyboardHeaderBounds={20,672,w-40,64};
     midiHelp.setBounds(30,682,w-360,28);
     meterBounds={w-220,704,180,8};
     keyboard.setBounds(36,750,w-72,158);
+    keyboard.setKeyWidth((w-72)/14.0f);
 }
 void DrizelAudioProcessorEditor::choosePreset(bool save)
 {
