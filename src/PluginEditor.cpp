@@ -320,8 +320,11 @@ void DrizelAudioProcessorEditor::timerCallback()
             {
                 juce::WavAudioFormat format;
                 std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
-                    stream.get(),reader->sampleRate,
-                    static_cast<unsigned int>(reader->numChannels),16,{},0));
+                    stream.get(),
+                    juce::AudioFormatWriterOptions{}
+                        .withSampleRate(reader->sampleRate)
+                        .withNumChannels(static_cast<int>(reader->numChannels))
+                        .withBitsPerSample(16)));
                 if(writer != nullptr)
                 {
                     stream.release();
