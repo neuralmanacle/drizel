@@ -3,6 +3,7 @@
 #include "audio/RealtimeEngine.h"
 #include "audio/Modulation.h"
 #include "audio/MidiInstrument.h"
+#include "audio/GrainMovement.h"
 
 // Host-facing wrapper. Audio owns the engine; the loader owns all disk I/O.
 class DrizelAudioProcessor : public juce::AudioProcessor, private juce::Thread
@@ -29,6 +30,21 @@ public:
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
 
+    void setMovement(drizel::MovementPolicy policy) noexcept
+    {
+        if (policy.valid()) movementWord.store(policy.packed());
+    }
+    drizel::MovementPolicy activeMovement() const noexcept
+    {
+        return drizel::MovementPolicy::unpack(movementWord.load());
+    }
+
+    std::uint64_t sampleRequestRevision();
+    bool applyMovementForSample(drizel::MovementPolicy, std::uint64_t expectedRevision);
+
+    void setPanelNote(int note, int velocity) noexcept { panelKeys[static_cast<std::size_t>(note)].store(velocity); }
+    int displayedHostNote() const noexcept { return hostKey.load(); }
+
     bool savePreset(const juce::File&); // Message thread file I/O.
     bool loadPreset(const juce::File&);
     void requestSample(const juce::File&); // Control thread only; queues a path.
@@ -44,12 +60,19 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout makeParameters();
     void run() override; // Loader loop, including packet reclamation.
     drizel::MidiInstrument instrument;
+    std::array<std::atomic<int>, 128> panelKeys {};
+    std::array<int, 128> playingPanelKeys {};
+    std::array<bool, 128> heldHostKeys {};
+    std::atomic<int> hostKey {-1};
     bool previousMidiMode = false;
     std::atomic<bool> resetInstrument {false};
     std::atomic<float>* midiMode = nullptr;
     std::atomic<float>* attack = nullptr;
     std::atomic<float>* release = nullptr;
     std::atomic<float>* rootNote = nullptr;
+    static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
+    std::atomic<std::uint64_t> movementWord {drizel::MovementPolicy{}.packed()};
+    drizel::GrainMovement movement;
     drizel::Lfo lfo;
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
@@ -71,8 +94,6 @@ private:
     std::atomic<float>* lfoDepth = nullptr;
     std::atomic<float>* lfoShape = nullptr;
     std::atomic<float>* lfoDestination = nullptr;
-    std::atomic<float>* speechDepth = nullptr;
-    std::atomic<float>* speechTarget = nullptr;
-    float speechEnvelope = 0.0f;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrizelAudioProcessor)
 };

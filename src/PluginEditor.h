@@ -1,10 +1,13 @@
 #pragma once
 #include "PluginProcessor.h"
 #include <array>
+#if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
+#include "MovementSpeech.h"
+#endif
 
-// All components, attachments and thumbnail work belong to the message thread.
 class DrizelAudioProcessorEditor : public juce::AudioProcessorEditor,
-    private juce::Timer, public juce::FileDragAndDropTarget, private juce::KeyListener
+    private juce::Timer, private juce::MidiKeyboardState::Listener,
+    public juce::FileDragAndDropTarget, private juce::KeyListener
 {
 public:
     explicit DrizelAudioProcessorEditor(DrizelAudioProcessor&);
@@ -19,31 +22,44 @@ public:
     bool keyPressed(const juce::KeyPress&, juce::Component*) override;
     bool keyStateChanged(bool, juce::Component*) override;
 private:
+    void handleNoteOn(juce::MidiKeyboardState*, int, int, float) override;
+    void handleNoteOff(juce::MidiKeyboardState*, int, int, float) override;
+    void setKeyboardOctave(int);
+    void previewMovement();
+    void applyMovement();
     void timerCallback() override;
+    void setWaveformPosition(float);
+    void endWaveformGesture();
+    void choosePreset(bool);
+
     DrizelAudioProcessor& processor;
+    juce::ParameterAttachment waveformPositionAttachment;
+    bool waveformGestureActive = false;
+    juce::TextEditor movementCommand;
+    juce::TextButton previewButton {"Preview"}, applyButton {"Apply"}, manualButton {"Manual scan"};
+#if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
+    MovementSpeech movementSpeech;
+    juce::TextButton speechButton {"Hold to talk"};
+    bool speechHeld = false;
+#endif
+    juce::Label movementStatus, movementTitle;
+    std::array<juce::Slider, 6> movementSettings;
+    std::array<juce::Label, 6> movementLabels;
+    drizel::MovementPolicy proposedMovement;
+    std::uint64_t previewRevision = 0;
     juce::TextButton loadButton {"Load WAV"};
-    juce::TextEditor speechText;
-    juce::TextButton speechGenerate {"Generate speech"};
-    juce::ComboBox speechTargetChoice;
-    juce::Slider speechDepthSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> speechTargetAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> speechDepthAttachment;
-    std::unique_ptr<juce::ChildProcess> speechProcess;
-    juce::File speechOutput;
-    juce::String speechMessage;
-    bool speechPending = false;
     class TransportButton : public juce::TextButton
     {
     public:
-        void paintButton(juce::Graphics& g, bool hovered, bool pressed) override
+        void paintButton(juce::Graphics& g, bool, bool) override
         {
-            auto area=getLocalBounds().toFloat().reduced(1.0f);
+            auto area = getLocalBounds().toFloat().reduced(1.0f);
             g.setColour(juce::Colours::white);
-            const float cx=area.getCentreX(), cy=area.getCentreY();
-            if(getToggleState())
+            const float cx = area.getCentreX(), cy = area.getCentreY();
+            if (getToggleState())
             {
-                g.fillRoundedRectangle(cx-9.0f,cy-9.0f,6.0f,18.0f,1.0f);
-                g.fillRoundedRectangle(cx+3.0f,cy-9.0f,6.0f,18.0f,1.0f);
+                g.fillRoundedRectangle(cx-9.0f, cy-9.0f, 6.0f, 18.0f, 1.0f);
+                g.fillRoundedRectangle(cx+3.0f, cy-9.0f, 6.0f, 18.0f, 1.0f);
             }
             else
             {
@@ -55,19 +71,18 @@ private:
     };
     TransportButton playButton;
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
-    juce::Label midiHelp, selectionLabel;
+    juce::Label midiHelp, selectionLabel, keyboardRange;
     juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice;
-    juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
+    juce::MidiKeyboardState keyboardState;
+    juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
+    juce::TextButton octaveDown {"−"}, octaveUp {"+"};
+    int keyboardOctave = 3, highlightedNote = -1;
     std::array<bool, 13> computerNotesDown {};
-    void setWaveformPosition(int x);
-    bool waveformGesture = false;
     juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;
-    void choosePreset(bool save);
     juce::String presetStatus;
     juce::Label status;
     std::array<juce::Slider, 9> sliders;
     std::array<juce::Label, 12> labels;
-    
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
     using ChoiceAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;

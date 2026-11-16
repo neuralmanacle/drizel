@@ -169,7 +169,14 @@ if(DRIZEL_BUILD_PLUGIN)
     if(APPLE)
         list(APPEND DRIZEL_FORMATS AU)
     endif()
+    if(APPLE)
+        set(DRIZEL_SPEECH_OPTIONS
+            MICROPHONE_PERMISSION_ENABLED TRUE
+            MICROPHONE_PERMISSION_TEXT "Drizel uses the microphone to transcribe movement commands."
+            PLIST_TO_MERGE "<plist><dict><key>NSSpeechRecognitionUsageDescription</key><string>Drizel transcribes spoken movement commands.</string></dict></plist>")
+    endif()
     juce_add_plugin(DrizelPlugin
+        ${DRIZEL_SPEECH_OPTIONS}
         COMPANY_NAME "Neural Manacle"
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
@@ -186,6 +193,13 @@ if(DRIZEL_BUILD_PLUGIN)
         target_compile_definitions(DrizelPlugin PRIVATE DRIZEL_HAS_NEURAL_MANACLE_LOGO=1)
     endif()
     target_link_libraries(DrizelPlugin PRIVATE drizel_core juce::juce_audio_utils)
+    if(APPLE)
+        enable_language(OBJCXX)
+        target_sources(DrizelPlugin PRIVATE src/MovementSpeech.mm)
+        set_source_files_properties(src/MovementSpeech.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+        target_compile_definitions(DrizelPlugin PUBLIC DRIZEL_MAC_SPEECH=1)
+        target_link_libraries(DrizelPlugin PRIVATE "-framework Speech" "-framework AVFoundation")
+    endif()
     target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 endif()
