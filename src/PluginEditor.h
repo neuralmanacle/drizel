@@ -22,7 +22,7 @@ private:
     void timerCallback() override;
     DrizelAudioProcessor& processor;
     juce::TextButton loadButton {"Load WAV"};
-    juce::ToggleButton playButton {"❚❚  Pause"};
+    juce::TextButton playButton {"Pause"};
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
     juce::Label midiHelp, selectionLabel, selectionDisplay, selectionTicks;
     juce::MidiKeyboardComponent keyboard {processor.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
