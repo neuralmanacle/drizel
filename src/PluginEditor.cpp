@@ -15,25 +15,26 @@ public:
                           float sliderPos, float startAngle, float endAngle,
                           juce::Slider&) override
     {
-        const auto area = juce::Rectangle<float>(static_cast<float>(x), static_cast<float>(y),
-                                                 static_cast<float>(width), static_cast<float>(height));
-        const float radius = juce::jmin(area.getWidth(), area.getHeight()) * 0.34f;
-        const auto centre = area.getCentre();
-        const float angle = startAngle + sliderPos * (endAngle - startAngle);
-        const auto dial = juce::Rectangle<float>(centre.x-radius, centre.y-radius, radius*2.0f, radius*2.0f);
-        g.setColour(juce::Colour(ink).withAlpha(0.25f));
-        g.fillEllipse(dial.expanded(4.0f).translated(0.0f,3.0f));
-        g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).brighter(0.45f),dial.getTopLeft(),
-                                                juce::Colour(emerald).darker(0.5f),dial.getBottomRight(),false));
-        g.fillEllipse(dial);
-        g.setColour(juce::Colours::white.withAlpha(0.7f));
-        g.drawEllipse(dial.reduced(2.0f),1.5f);
-        g.setColour(juce::Colours::white.withAlpha(0.35f));
-        g.fillEllipse(dial.withHeight(radius*0.50f).reduced(radius*0.25f,0.0f).translated(0.0f,radius*0.14f));
-        juce::Path pointer;
-        pointer.addRoundedRectangle(-2.0f,-radius*0.86f,4.0f,radius*0.35f,2.0f);
-        g.setColour(juce::Colour(ink));
-        g.fillPath(pointer,juce::AffineTransform::rotation(angle).translated(centre.x,centre.y));
+        // Flat, forest-green hardware knobs based on the Drizel master-plan reference.
+        // Keep the value indicator dynamic while matching the reference's amber tick.
+        const auto bounds=juce::Rectangle<float>(static_cast<float>(x),static_cast<float>(y),
+                                                  static_cast<float>(width),static_cast<float>(height));
+        const auto centre=bounds.getCentre();
+        const float radius=juce::jmin(bounds.getWidth(),bounds.getHeight())*0.43f;
+        const auto outer=juce::Rectangle<float>(centre.x-radius,centre.y-radius,radius*2.0f,radius*2.0f);
+        g.setColour(juce::Colour(0xff819c89));
+        g.fillEllipse(outer);
+        const float inset=juce::jmax(3.0f,radius*0.075f);
+        g.setColour(juce::Colour(0xff2d4438));
+        g.fillEllipse(outer.reduced(inset));
+        const float angle=startAngle+sliderPos*(endAngle-startAngle);
+        const float innerRadius=radius-inset;
+        const auto from=centre+juce::Point<float>(std::sin(angle)*innerRadius*0.57f,
+                                                   -std::cos(angle)*innerRadius*0.57f);
+        const auto to=centre+juce::Point<float>(std::sin(angle)*innerRadius*0.85f,
+                                                 -std::cos(angle)*innerRadius*0.85f);
+        g.setColour(juce::Colour(0xffe7b66d));
+        g.drawLine(from.x,from.y,to.x,to.y,juce::jmax(3.0f,radius*0.075f));
     }
 };
 DrizelGlassLookAndFeel& glassLook() { static DrizelGlassLookAndFeel look; return look; }
