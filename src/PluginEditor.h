@@ -22,6 +22,16 @@ private:
     void timerCallback() override;
     DrizelAudioProcessor& processor;
     juce::TextButton loadButton {"Load WAV"};
+    juce::TextEditor speechText;
+    juce::TextButton speechGenerate {"Generate speech"};
+    juce::ComboBox speechTargetChoice;
+    juce::Slider speechDepthSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> speechTargetAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> speechDepthAttachment;
+    std::unique_ptr<juce::ChildProcess> speechProcess;
+    juce::File speechOutput;
+    juce::String speechMessage;
+    bool speechPending = false;
     class TransportButton : public juce::TextButton
     {
     public:
