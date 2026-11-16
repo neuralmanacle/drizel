@@ -10,7 +10,9 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(status);
     addAndMakeVisible(midiHelp);
     addAndMakeVisible(selectionLabel);
-    addAndMakeVisible(selection);
+    addAndMakeVisible(selectionKnob);
+    addAndMakeVisible(selectionDisplay);
+    addAndMakeVisible(selectionTicks);
     addAndMakeVisible(keyboardToggle);
     addAndMakeVisible(keyboard);
     keyboard.setAvailableRange(36, 96);
@@ -57,8 +59,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     shape.addItemList(juce::StringArray{"Sine","Triangle"},1);
     destination.addItemList(juce::StringArray{"Off","Position","Pitch"},1);
     mode.addItemList(juce::StringArray{"Drone","MIDI"},1);
-    selection.addItemList(juce::StringArray{"Manual","Attack","Sustain","Avoid silence","Bright"},1);
-    for(auto* combo : {&shape,&destination,&mode,&selection})
+
+    for(auto* combo : {&shape,&destination,&mode})
     {
         addAndMakeVisible(*combo);
         combo->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff20535a));
@@ -68,7 +70,20 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     shapeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoShape",shape);
     destinationAttachment=std::make_unique<ComboAttachment>(processor.parameters,"lfoDestination",destination);
     modeAttachment=std::make_unique<ComboAttachment>(processor.parameters,"midiMode",mode);
-    selectionAttachment=std::make_unique<ComboAttachment>(processor.parameters,"grainSelection",selection);
+    selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    selectionKnob.setRange(0.0, 4.0, 1.0);
+    selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
+    selectionKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
+    selectionKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
+    selectionAttachment=std::make_unique<SliderAttachment>(processor.parameters,"grainSelection",selectionKnob);
+    selectionDisplay.setJustificationType(juce::Justification::centred);
+    selectionDisplay.setColour(juce::Label::backgroundColourId, juce::Colour(0xff102a3a));
+    selectionDisplay.setColour(juce::Label::textColourId, juce::Colour(0xff20d6c7));
+    selectionDisplay.setFont(juce::Font(17.0f, juce::Font::bold));
+    selectionTicks.setText("MAN / ATK / SUS / SIL / BRT",juce::dontSendNotification);
+    selectionTicks.setColour(juce::Label::textColourId,juce::Colour(0xffa4c2bf));
+    selectionTicks.setJustificationType(juce::Justification::centred);
     playAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.parameters,"play",playButton);
     selectionLabel.setText("GRAIN SELECTION",juce::dontSendNotification);
     selectionLabel.setColour(juce::Label::textColourId,juce::Colour(0xffe8f4ef));
@@ -112,6 +127,9 @@ void DrizelAudioProcessorEditor::timerCallback()
     }
     displayedPeak = std::max(processor.outputPeak(), displayedPeak * 0.9f);
     activeGrains = processor.activeGrainCount();
+    const int selected=juce::jlimit(0,4,static_cast<int>(std::lround(processor.parameters.getRawParameterValue("grainSelection")->load())));
+    static const char* modes[]={"MANUAL","ATTACK","SUSTAIN","AVOID SILENCE","BRIGHT"};
+    selectionDisplay.setText(modes[selected],juce::dontSendNotification);
     repaint();
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
@@ -182,8 +200,10 @@ void DrizelAudioProcessorEditor::resized()
     shape.setBounds(930,592,100,30);
     destination.setBounds(1040,592,120,30);
     selectionLabel.setBounds(30,337,150,25);
-    selection.setBounds(184,337,190,27);
-    midiHelp.setBounds(400,337,w-430,25);
+    selectionKnob.setBounds(185,324,54,54);
+    selectionTicks.setBounds(248,343,260,25);
+    selectionDisplay.setBounds(518,332,200,37);
+    midiHelp.setBounds(730,337,w-760,25);
     keyboardHeaderBounds={20,672,w-40,64};
     keyboardToggle.setBounds(36,686,220,35);
     meterBounds={w-220,704,180,8};
