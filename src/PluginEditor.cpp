@@ -279,9 +279,9 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawRoundedRectangle(headerBounds.toFloat().reduced(0.8f),16.0f,1.4f);
     g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.88f),waveformBounds.getTopLeft().toFloat(),
                                            juce::Colour(forest).withAlpha(0.8f),waveformBounds.getBottomRight().toFloat(),false));
-    g.fillRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f);
+    g.fillRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f);
     g.setColour(juce::Colour(pearl).withAlpha(0.4f));
-    g.drawRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f,1.2f);
+    g.drawRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f,1.2f);
     g.setColour(ivory);
     g.setFont(juce::Font(juce::FontOptions(30.0f, juce::Font::bold)));
     g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
@@ -352,10 +352,10 @@ void DrizelAudioProcessorEditor::resized()
     waveformBounds={46,157,w-92,160};
 
     // Dedicated selector strip, fully outside the waveform and control panels.
-    selectionLabel.setBounds(40,342,145,24);
-    selectionKnob.setBounds(187,333,48,48);
-    selectionTicks.setBounds(245,341,238,24);
-    selectionDisplay.setBounds(505,337,185,32);
+    selectionLabel.setBounds(40,356,145,24);
+    selectionKnob.setBounds(187,345,48,48);
+    selectionTicks.setBounds(245,356,238,24);
+    selectionDisplay.setBounds(505,352,185,32);
 
     deckBounds={20,395,w-40,261};
     // Each rotary control is positioned inside its own panel, with no cross-panel overlap.
