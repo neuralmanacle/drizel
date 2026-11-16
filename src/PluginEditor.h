@@ -28,10 +28,6 @@ private:
         void paintButton(juce::Graphics& g, bool hovered, bool pressed) override
         {
             auto area=getLocalBounds().toFloat().reduced(1.0f);
-            g.setColour(juce::Colour(pressed ? 0xff195844 : hovered ? 0xff286f59 : 0xff153e34));
-            g.fillRoundedRectangle(area,9.0f);
-            g.setColour(juce::Colour(0xff93b8a7));
-            g.drawRoundedRectangle(area,9.0f,1.0f);
             g.setColour(juce::Colours::white);
             const float cx=area.getCentreX(), cy=area.getCentreY();
             if(getToggleState())
