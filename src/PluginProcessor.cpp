@@ -80,7 +80,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         grainsActive.store(0, std::memory_order_relaxed);
         return;
     }
-    const bool useMidi = midiMode->load() >= 0.5f;
+    keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);\n    const bool useMidi = midiMode->load() >= 0.5f;
     if (resetInstrument.exchange(false) || useMidi != previousMidiMode)
         instrument.reset();
     previousMidiMode = useMidi;
