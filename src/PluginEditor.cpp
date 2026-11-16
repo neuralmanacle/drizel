@@ -1,4 +1,43 @@
 #include "PluginEditor.h"
+namespace
+{
+constexpr juce::uint32 emerald = 0xff00d879;
+constexpr juce::uint32 mint = 0xff00e5ba;
+constexpr juce::uint32 cyan = 0xff19e8e8;
+constexpr juce::uint32 forest = 0xff006f56;
+constexpr juce::uint32 ink = 0xff052b2b;
+constexpr juce::uint32 pearl = 0xfff1fffc;
+
+class DrizelGlassLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
+                          float sliderPos, float startAngle, float endAngle,
+                          juce::Slider&) override
+    {
+        const auto area = juce::Rectangle<float>(static_cast<float>(x), static_cast<float>(y),
+                                                 static_cast<float>(width), static_cast<float>(height));
+        const float radius = juce::jmin(area.getWidth(), area.getHeight()) * 0.34f;
+        const auto centre = area.getCentre();
+        const float angle = startAngle + sliderPos * (endAngle - startAngle);
+        const auto dial = juce::Rectangle<float>(centre.x-radius, centre.y-radius, radius*2.0f, radius*2.0f);
+        g.setColour(juce::Colour(ink).withAlpha(0.25f));
+        g.fillEllipse(dial.expanded(4.0f).translated(0.0f,3.0f));
+        g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).brighter(0.45f),dial.getTopLeft(),
+                                                juce::Colour(emerald).darker(0.5f),dial.getBottomRight(),false));
+        g.fillEllipse(dial);
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.drawEllipse(dial.reduced(2.0f),1.5f);
+        g.setColour(juce::Colours::white.withAlpha(0.35f));
+        g.fillEllipse(dial.withHeight(radius*0.50f).reduced(radius*0.25f,0.0f).translated(0.0f,radius*0.14f));
+        juce::Path pointer;
+        pointer.addRoundedRectangle(-2.0f,-radius*0.86f,4.0f,radius*0.35f,2.0f);
+        g.setColour(juce::Colour(ink));
+        g.fillPath(pointer,juce::AffineTransform::rotation(angle).translated(centre.x,centre.y));
+    }
+};
+DrizelGlassLookAndFeel& glassLook() { static DrizelGlassLookAndFeel look; return look; }
+}
 
 DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     : AudioProcessorEditor(p), processor(p)
@@ -16,10 +55,10 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(keyboard);
     keyboard.setAvailableRange(36, 96);
     keyboard.setKeyWidth(30.0f);
-    keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(0xffe8f4ef));
-    keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xff0b2026));
-    keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(0xff20d6c7));
-    keyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(0xff35bdb5));
+    keyboard.setColour(juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour(pearl));
+    keyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(ink));
+    keyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, juce::Colour(mint));
+    keyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colour(cyan));
     keyboard.setVisible(true);
     midiHelp.setText("MIDI CH 1  •  BEND ±2  •  CC1 LFO  •  CC74 POSITION  •  CC71 DENSITY",
                      juce::dontSendNotification);
@@ -31,7 +70,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     {
         labels[i].setText(names[i], juce::dontSendNotification);
         labels[i].setJustificationType(juce::Justification::centred);
-        labels[i].setColour(juce::Label::textColourId, juce::Colour(0xff37666b));
+        labels[i].setColour(juce::Label::textColourId, juce::Colour(forest));
         addAndMakeVisible(labels[i]);
     }
     for (std::size_t i=0; i<sliders.size(); ++i)
@@ -39,12 +78,13 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         auto& s=sliders[i];
         s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 22);
-        s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
-        s.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
-        s.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
-        s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xff0b2026));
-        s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xffe8f4ef));
+        s.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
+        s.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
+        s.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
+        s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(ink));
+        s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(pearl));
         s.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+        s.setLookAndFeel(&glassLook());
         addAndMakeVisible(s);
         attachments[i]=std::make_unique<SliderAttachment>(processor.parameters,ids[i],s);
     }
@@ -55,13 +95,14 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         knob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         knob.setRange(0.0, static_cast<double>(maximum), 1.0);
         knob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-        knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
-        knob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
-        knob.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
+        knob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
+        knob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
+        knob.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
+        knob.setLookAndFeel(&glassLook());
         addAndMakeVisible(knob);
         display.setJustificationType(juce::Justification::centred);
-        display.setColour(juce::Label::backgroundColourId, juce::Colour(0xff102a3a));
-        display.setColour(juce::Label::textColourId, juce::Colour(0xff20d6c7));
+        display.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
+        display.setColour(juce::Label::textColourId, juce::Colour(mint));
         display.setFont(juce::Font(13.0f, juce::Font::bold));
         addAndMakeVisible(display);
     };
@@ -74,20 +115,21 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     selectionKnob.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     selectionKnob.setRange(0.0, 4.0, 1.0);
     selectionKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff20d6c7));
-    selectionKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff477d9b));
-    selectionKnob.setColour(juce::Slider::thumbColourId, juce::Colour(0xffe5b96b));
+    selectionKnob.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(mint));
+    selectionKnob.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(forest));
+    selectionKnob.setColour(juce::Slider::thumbColourId, juce::Colour(cyan));
+    selectionKnob.setLookAndFeel(&glassLook());
     selectionAttachment=std::make_unique<SliderAttachment>(processor.parameters,"grainSelection",selectionKnob);
     selectionDisplay.setJustificationType(juce::Justification::centred);
-    selectionDisplay.setColour(juce::Label::backgroundColourId, juce::Colour(0xff102a3a));
-    selectionDisplay.setColour(juce::Label::textColourId, juce::Colour(0xff20d6c7));
+    selectionDisplay.setColour(juce::Label::backgroundColourId, juce::Colour(ink));
+    selectionDisplay.setColour(juce::Label::textColourId, juce::Colour(mint));
     selectionDisplay.setFont(juce::Font(17.0f, juce::Font::bold));
     selectionTicks.setText("MAN / ATK / SUS / SIL / BRT",juce::dontSendNotification);
-    selectionTicks.setColour(juce::Label::textColourId,juce::Colour(0xffa4c2bf));
+    selectionTicks.setColour(juce::Label::textColourId,juce::Colour(pearl));
     selectionTicks.setJustificationType(juce::Justification::centred);
     playAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor.parameters,"play",playButton);
     selectionLabel.setText("GRAIN SELECTION",juce::dontSendNotification);
-    selectionLabel.setColour(juce::Label::textColourId,juce::Colour(0xffe8f4ef));
+    selectionLabel.setColour(juce::Label::textColourId,juce::Colour(pearl));
     loadButton.onClick=[this]
     {
         chooser=std::make_unique<juce::FileChooser>("Load a WAV",juce::File{},"*.wav");
@@ -112,6 +154,11 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
 }
 DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
 {
+    for(auto& slider : sliders) slider.setLookAndFeel(nullptr);
+    shapeKnob.setLookAndFeel(nullptr);
+    destinationKnob.setLookAndFeel(nullptr);
+    modeKnob.setLookAndFeel(nullptr);
+    selectionKnob.setLookAndFeel(nullptr);
     for(int i=0;i<13;++i)
         if(computerNotesDown[static_cast<std::size_t>(i)])
             processor.keyboardState.noteOff(1,60+i,0.0f);
@@ -156,15 +203,28 @@ void DrizelAudioProcessorEditor::timerCallback()
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    const auto bg=juce::Colour(0xff0b2026);
-    const auto surface=juce::Colour(0xff163a40);
-    const auto teal=juce::Colour(0xff5cd9c6);
-    const auto ivory=juce::Colour(0xffe8f4ef);
-    const auto amber=juce::Colour(0xffe5b96b);
-    g.fillAll(bg);
-    g.setColour(surface);
-    g.fillRoundedRectangle(headerBounds.toFloat(),12.0f);
-    g.fillRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),12.0f);
+    const auto bg=juce::Colour(ink);
+    const auto surface=juce::Colour(emerald);
+    const auto teal=juce::Colour(cyan);
+    const auto ivory=juce::Colour(pearl);
+    const auto amber=juce::Colour(mint);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff008f63),0.0f,0.0f,
+                                           juce::Colour(0xff00d8bb),static_cast<float>(getWidth()),
+                                           static_cast<float>(getHeight()),false));
+    g.fillAll();
+    g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).withAlpha(0.38f),getWidth()*0.8f,0.0f,
+                                           juce::Colour(emerald).withAlpha(0.0f),getWidth()*0.2f,getHeight()*0.7f,true));
+    g.fillRect(getLocalBounds());
+    g.setGradientFill(juce::ColourGradient(juce::Colour(pearl).withAlpha(0.35f),headerBounds.getTopLeft().toFloat(),
+                                           juce::Colour(ink).withAlpha(0.26f),headerBounds.getBottomRight().toFloat(),false));
+    g.fillRoundedRectangle(headerBounds.toFloat(),16.0f);
+    g.setColour(juce::Colour(pearl).withAlpha(0.48f));
+    g.drawRoundedRectangle(headerBounds.toFloat().reduced(0.8f),16.0f,1.4f);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.88f),waveformBounds.getTopLeft().toFloat(),
+                                           juce::Colour(forest).withAlpha(0.8f),waveformBounds.getBottomRight().toFloat(),false));
+    g.fillRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f);
+    g.setColour(juce::Colour(pearl).withAlpha(0.4f));
+    g.drawRoundedRectangle(waveformBounds.expanded(12,38).toFloat(),18.0f,1.2f);
     g.setColour(ivory);
     g.setFont(juce::Font(30.0f,juce::Font::bold));
     g.drawText("drizel",headerBounds.withTrimmedLeft(22).removeFromLeft(170),juce::Justification::centredLeft);
@@ -186,22 +246,26 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(ivory);
     g.setFont(13.0f);
     g.drawText("ACTIVE GRAINS  "+juce::String(activeGrains),waveformBounds.getX(),waveformBounds.getBottom()+8,240,22,juce::Justification::centredLeft);
-    g.setColour(ivory);
-    g.fillRoundedRectangle(deckBounds.toFloat(),12.0f);
-    g.setColour(juce::Colour(0xff37666b));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(pearl).withAlpha(0.94f),deckBounds.getTopLeft().toFloat(),
+                                           juce::Colour(0xffa5f9db).withAlpha(0.95f),deckBounds.getBottomRight().toFloat(),false));
+    g.fillRoundedRectangle(deckBounds.toFloat(),18.0f);
+    g.setColour(juce::Colour(pearl).withAlpha(0.8f));
+    g.drawRoundedRectangle(deckBounds.toFloat().reduced(1.0f),18.0f,1.5f);
+    g.setColour(juce::Colour(forest));
     g.setFont(juce::Font(16.0f,juce::Font::bold));
     for(const auto& section : std::array<std::pair<const char*,int>,4>{{{"GRAIN ENGINE",24},{"PITCH / VOICE",370},{"ENVELOPE",680},{"MODULATION",925}}})
         g.drawText(section.first,deckBounds.getX()+section.second,deckBounds.getY()+14,250,25,juce::Justification::centredLeft);
-    g.setColour(surface);
+    g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.6f),keyboardHeaderBounds.getTopLeft().toFloat(),
+                                           juce::Colour(forest).withAlpha(0.55f),keyboardHeaderBounds.getBottomRight().toFloat(),false));
     g.fillRoundedRectangle(keyboardHeaderBounds.toFloat(),12.0f);
-    g.setColour(juce::Colour(0xff37666b));
+    g.setColour(juce::Colour(forest));
     g.setFont(11.0f);
     g.drawText("MODE",405,563,65,16,juce::Justification::centred);
     g.drawText("SHAPE",890,563,65,16,juce::Justification::centred);
     g.drawText("TARGET",1044,563,65,16,juce::Justification::centred);
-    g.setColour(juce::Colour(0xff20535a));
+    g.setColour(juce::Colour(ink).withAlpha(0.7f));
     g.fillRoundedRectangle(meterBounds.toFloat(),4.0f);
-    g.setColour(displayedPeak>=0.99f?amber:teal);
+    g.setColour(displayedPeak>=0.99f?ivory:teal);
     g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),4.0f);
 }
 void DrizelAudioProcessorEditor::resized()
