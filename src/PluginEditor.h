@@ -76,7 +76,6 @@ private:
     juce::TextButton dspModeButton {"DSP"}, neuralModeButton {"NEURAL"};
     std::array<juce::Slider, 3> neuralSliders;
     std::array<juce::Label, 3> neuralLabels;
-    std::array<std::unique_ptr<SliderAttachment>, 3> neuralAttachments;
     juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice;
     juce::MidiKeyboardState keyboardState;
     juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
@@ -89,6 +88,7 @@ private:
     std::array<juce::Slider, 9> sliders;
     std::array<juce::Label, 12> labels;
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+    std::array<std::unique_ptr<SliderAttachment>, 3> neuralAttachments;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
     using ChoiceAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     std::unique_ptr<ChoiceAttachment> shapeAttachment, destinationAttachment, modeAttachment, selectionAttachment;
