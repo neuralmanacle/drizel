@@ -4,12 +4,12 @@
 #endif
 namespace
 {
-constexpr juce::uint32 emerald = 0xff12b800;
-constexpr juce::uint32 mint = 0xff8dca67;
-constexpr juce::uint32 cyan = 0xffd73832;
+constexpr juce::uint32 emerald = 0xff8bad26;
+constexpr juce::uint32 mint = 0xffb5d54c;
+constexpr juce::uint32 cyan = 0xffef5149;
 constexpr juce::uint32 forest = 0xff103d20;
 constexpr juce::uint32 ink = 0xff10271a;
-constexpr juce::uint32 pearl = 0xfffff0d8;
+constexpr juce::uint32 pearl = 0xfff6edd9;
 
 class DrizelGlassLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -355,7 +355,59 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(component);
     setKeyboardOctave(3);
 
-    setSize(1040, 870);
+    neuralTitle.setText("NEURAL FX", juce::dontSendNotification);
+    neuralModeLabel.setText("PROCESSING MODE", juce::dontSendNotification);
+    for (auto* label : {&neuralTitle, &neuralModeLabel})
+    {
+        label->setColour(juce::Label::textColourId, juce::Colour(forest));
+        addAndMakeVisible(*label);
+    }
+    neuralTitle.setFont(juce::Font(juce::FontOptions(18.0f, juce::Font::bold)));
+    for (auto* button : {&dspModeButton, &neuralModeButton})
+    {
+        addAndMakeVisible(*button);
+        button->setLookAndFeel(&glassLook());
+        button->setColour(juce::TextButton::textColourOffId, juce::Colour(pearl));
+        button->setClickingTogglesState(true);
+    }
+    dspModeButton.setToggleState(true, juce::dontSendNotification);
+    dspModeButton.onClick = [this] {
+        dspModeButton.setToggleState(true, juce::dontSendNotification);
+        neuralModeButton.setToggleState(false, juce::dontSendNotification);
+    };
+    neuralModeButton.onClick = [this] {
+        // Neural mode is a visual placeholder until the DSP exposes a mode parameter.
+        neuralModeButton.setToggleState(false, juce::dontSendNotification);
+        dspModeButton.setToggleState(true, juce::dontSendNotification);
+    };
+    neuralModeButton.setEnabled(false);
+    const char* fxNames[] = {"DRIVE", "DRY / WET", "OUTPUT GAIN"};
+    const char* fxIds[] = {"neuralDrive", "neuralMix", "neuralOutputGain"};
+    for (std::size_t i = 0; i < neuralSliders.size(); ++i)
+    {
+        auto& slider = neuralSliders[i];
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 19);
+        slider.setLookAndFeel(&glassLook());
+        slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(mint));
+        slider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(ink));
+        slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+        neuralLabels[i].setText(fxNames[i], juce::dontSendNotification);
+        neuralLabels[i].setJustificationType(juce::Justification::centred);
+        neuralLabels[i].setColour(juce::Label::textColourId, juce::Colour(forest));
+        addAndMakeVisible(slider);
+        addAndMakeVisible(neuralLabels[i]);
+        if (p.parameters.getParameter(fxIds[i]) != nullptr)
+            neuralAttachments[i] = std::make_unique<SliderAttachment>(p.parameters, fxIds[i], slider);
+        else
+        {
+            slider.setRange(0.0, 1.0);
+            slider.setValue(i == 1 ? 0.5 : 0.0);
+            slider.setEnabled(false);
+            slider.setTooltip("Neural FX parameter not yet exposed by the audio processor");
+        }
+    }
+    setSize(1320, 1250);
     startTimerHz(30);
     timerCallback();
 }
@@ -369,6 +421,9 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
     endWaveformGesture();
     for (auto& slider : sliders) slider.setLookAndFeel(nullptr);
     for (auto& slider : movementSettings) slider.setLookAndFeel(nullptr);
+    for (auto& slider : neuralSliders) slider.setLookAndFeel(nullptr);
+    dspModeButton.setLookAndFeel(nullptr);
+    neuralModeButton.setLookAndFeel(nullptr);
     for (auto* button : {&loadButton, &saveButton, &presetButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
@@ -492,232 +547,177 @@ void DrizelAudioProcessorEditor::timerCallback()
 }
 static std::array<juce::Rectangle<int>,4> controlPanels(juce::Rectangle<int> deck)
 {
-    // One source of truth for panel painting and component placement.
-    constexpr int gap=12;
-    const int usable=deck.getWidth()-3*gap;
-    const std::array<int,4> weights {{340,280,225,279}};
-    constexpr int total=1124;
-    const int a=usable*weights[0]/total;
-    const int b=usable*weights[1]/total;
-    const int c=usable*weights[2]/total;
-    const int d=usable-a-b-c;
-    const int x=deck.getX(),y=deck.getY(),h=deck.getHeight();
-    return {{{x,y,a,h},{x+a+gap,y,b,h},{x+a+b+2*gap,y,c,h},
+    constexpr int gap = 18;
+    const int width = deck.getWidth() - 3 * gap;
+    const int a = width * 26 / 100;
+    const int b = width * 22 / 100;
+    const int c = width * 22 / 100;
+    const int d = width - a - b - c;
+    const int x = deck.getX(), y = deck.getY(), h = deck.getHeight();
+    return {{{x,y,a,h}, {x+a+gap,y,b,h}, {x+a+b+2*gap,y,c,h},
              {x+a+b+c+3*gap,y,d,h}}};
 }
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    const auto bg=juce::Colour(ink);
-    const auto surface=juce::Colour(emerald);
-    const auto teal=juce::Colour(cyan);
-    const auto ivory=juce::Colour(pearl);
-    const auto amber=juce::Colour(mint);
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff167a20),0.0f,0.0f,
-                                           juce::Colour(0xff12b800),static_cast<float>(getWidth()),
-                                           static_cast<float>(getHeight()),false));
-    juce::Path roundedFrame;
-    roundedFrame.addRoundedRectangle(getLocalBounds().toFloat(),22.0f);
-    g.reduceClipRegion(roundedFrame);
-    g.fillAll();
-    g.setGradientFill(juce::ColourGradient(juce::Colour(cyan).withAlpha(0.38f),getWidth()*0.8f,0.0f,
-                                           juce::Colour(emerald).withAlpha(0.0f),getWidth()*0.2f,getHeight()*0.7f,true));
-    g.fillRect(getLocalBounds());
-    g.setGradientFill(juce::ColourGradient(juce::Colour(ink).withAlpha(0.88f),waveformBounds.getTopLeft().toFloat(),
-                                           juce::Colour(forest).withAlpha(0.8f),waveformBounds.getBottomRight().toFloat(),false));
-    g.fillRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f);
-    g.setColour(juce::Colour(pearl).withAlpha(0.4f));
-    g.drawRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f,1.2f);
-    g.setColour(ivory);
-    g.setFont(juce::Font(juce::FontOptions(30.0f, juce::Font::bold)));
-    // Drizel product branding. Supply your replacement logo as a CMake
-    // binary resource named drizel_logo.png and define DRIZEL_HAS_DRIZEL_LOGO.
+    const auto green = juce::Colour(emerald);
+    const auto cream = juce::Colour(pearl);
+    const auto dark = juce::Colour(forest);
+    const auto area = getLocalBounds().toFloat();
+    g.fillAll(juce::Colours::transparentBlack);
+    g.setColour(green);
+    g.fillRoundedRectangle(area, 34.0f);
+
+    const auto panel = [&](juce::Rectangle<int> bounds)
+    {
+        g.setColour(cream);
+        g.fillRoundedRectangle(bounds.toFloat(), 17.0f);
+    };
+    const auto title = [&](const juce::String& value, juce::Rectangle<int> bounds)
+    {
+        g.setColour(dark);
+        g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
+        g.drawText(value, bounds, juce::Justification::centredLeft);
+    };
+
+    g.setColour(cream);
+    g.setFont(juce::Font(juce::FontOptions(40.0f, juce::Font::bold)));
+    g.drawText("drizel", 88, 29, 260, 54, juce::Justification::centredLeft);
 #if defined(DRIZEL_HAS_DRIZEL_LOGO)
     {
-        static const juce::Image drizelLogo = juce::ImageFileFormat::loadFrom(
+        static const auto logo = juce::ImageFileFormat::loadFrom(
             BinaryData::drizel_logo_png, BinaryData::drizel_logo_pngSize);
-        if (drizelLogo.isValid())
-            g.drawImageWithin(drizelLogo, 30, 18, 44, 44,
-                              juce::RectanglePlacement::centred);
+        if (logo.isValid())
+            g.drawImageWithin(logo, 38, 33, 46, 46, juce::RectanglePlacement::centred);
     }
 #endif
-    g.drawText("drizel", juce::Rectangle<int>(82, 15, 175, 48),
-               juce::Justification::centredLeft);
 
-    // Neural Manacle is the studio credit, not the Drizel product logo.
-    g.setFont(juce::Font(juce::FontOptions(12.0f)));
-    g.setColour(juce::Colour(pearl).withAlpha(0.85f));
-    g.drawText("a product by", 84, 64, 83, 20, juce::Justification::centredLeft);
-#if defined(DRIZEL_HAS_NEURAL_MANACLE_LOGO)
-    {
-        static const juce::Image studioLogo = juce::ImageFileFormat::loadFrom(
-            BinaryData::neural_manacle_logo_png,
-            BinaryData::neural_manacle_logo_pngSize);
-        if (studioLogo.isValid())
-            g.drawImageWithin(studioLogo, 168, 63, 22, 22,
-                              juce::RectanglePlacement::centred);
-    }
-#endif
-    g.setFont(juce::Font(juce::FontOptions(12.0f, juce::Font::bold)));
-    g.drawText("neural manacle studios", 194, 64, 210, 20,
+    g.setColour(dark);
+    g.fillRoundedRectangle(waveformBounds.expanded(8).toFloat(), 14.0f);
+    const auto sampleName = processor.loadedSampleState().path.fromLastOccurrenceOf("/", false, false);
+    g.setColour(juce::Colour(mint));
+    g.setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
+    g.drawText(sampleName.isEmpty() ? "DROP OR LOAD A WAV" : sampleName,
+               waveformBounds.getX()+6, waveformBounds.getY()-25, 320, 22,
                juce::Justification::centredLeft);
-    // Matching dark analog readouts for the loaded input and active grain count.
-    const auto drawReadout=[&g](juce::Rectangle<int> area,const juce::String& value)
+    g.drawText("ACTIVE GRAINS  " + juce::String(processor.activeGrainCount()),
+               waveformBounds.getRight()-210, waveformBounds.getY()-25, 205, 22,
+               juce::Justification::centredRight);
+    g.setColour(juce::Colour(cyan));
+    if (thumbnail.getTotalLength() > 0.0)
     {
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff25483a),
-                                               area.getTopLeft().toFloat(),
-                                               juce::Colour(0xff102b25),
-                                               area.getBottomRight().toFloat(),false));
-        g.fillRoundedRectangle(area.toFloat(),6.0f);
-        g.setColour(juce::Colour(0xff86a891));
-        g.drawRoundedRectangle(area.toFloat().reduced(0.6f),6.0f,1.1f);
-        g.setColour(juce::Colour(mint));
-        g.setFont(juce::Font(juce::FontOptions(14.0f)));
-        g.drawFittedText(value,area.reduced(10,2),juce::Justification::centredLeft,1);
-    };
-    const auto sampleName=processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false);
-    drawReadout({waveformBounds.getX(),waveformBounds.getY()-32,310,27},
-                "INPUT  /  " + (sampleName.isEmpty() ? juce::String("No WAV") : sampleName));
-    drawReadout({waveformBounds.getRight()-190,waveformBounds.getY()-32,190,27},
-                "ACTIVE GRAINS  " + juce::String(processor.activeGrainCount()));
-    g.setColour(teal);
-    if(thumbnail.getTotalLength()>0.0)
-    {
-        thumbnail.drawChannels(g,waveformBounds,0.0,thumbnail.getTotalLength(),1.0f);
-        const float pos=processor.parameters.getRawParameterValue("position")->load();
-        const int x=waveformBounds.getX()+juce::roundToInt(pos*(waveformBounds.getWidth()-1));
-        g.setColour(teal.withAlpha(0.22f));
-        g.fillRoundedRectangle(juce::Rectangle<float>(static_cast<float>(x-32),static_cast<float>(waveformBounds.getY()),64.0f,static_cast<float>(waveformBounds.getHeight())),5.0f);
-        g.setColour(amber);
-        g.drawVerticalLine(x,static_cast<float>(waveformBounds.getY()),static_cast<float>(waveformBounds.getBottom()));
+        thumbnail.drawChannels(g, waveformBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
+        const float position = processor.parameters.getRawParameterValue("position")->load();
+        const int x = waveformBounds.getX() + juce::roundToInt(position * (waveformBounds.getWidth()-1));
+        g.setColour(cream.withAlpha(0.35f));
+        g.fillRoundedRectangle(juce::Rectangle<float>((float)x-12, (float)waveformBounds.getY(),
+                                                       24.0f, (float)waveformBounds.getHeight()), 3.0f);
     }
-    else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
-    // Dedicated ivory movement panel; the label is a child component.
-    const auto movementPanel = juce::Rectangle<float>(20.0f, 520.0f,
-                                                       static_cast<float>(getWidth() - 40), 220.0f);
-    g.setColour(juce::Colours::black.withAlpha(0.20f));
-    g.fillRoundedRectangle(movementPanel.translated(0.0f, 4.0f), 17.0f);
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xffe2e7d8), movementPanel.getTopLeft(),
-                                            juce::Colour(0xffc5ddcf), movementPanel.getBottomRight(), false));
-    g.fillRoundedRectangle(movementPanel, 17.0f);
-    g.setColour(juce::Colour(pearl).withAlpha(0.58f));
-    g.drawRoundedRectangle(movementPanel.reduced(1.0f), 17.0f, 1.1f);
-    // Separate dark keyboard bay for visual continuity with the waveform.
-    const auto keyboardPanel = juce::Rectangle<float>(20.0f, 749.0f,
-                                                       static_cast<float>(getWidth() - 40), 113.0f);
-    g.setColour(juce::Colour(0xff102b25));
-    g.fillRoundedRectangle(keyboardPanel, 15.0f);
-    // Four physically separate control panels, matching the reference layout.
-    const auto panels=controlPanels(deckBounds);
-    for(const auto& panel:panels)
+    else
     {
-        g.setColour(juce::Colour(ink).withAlpha(0.20f));
-        g.fillRoundedRectangle(panel.translated(0,4).toFloat(),17.0f);
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xffe2e7d8),panel.getTopLeft().toFloat(),
-                                               juce::Colour(0xffc5ddcf),panel.getBottomRight().toFloat(),false));
-        g.fillRoundedRectangle(panel.toFloat(),17.0f);
-        g.setColour(juce::Colour(pearl).withAlpha(0.58f));
-        g.drawRoundedRectangle(panel.toFloat().reduced(1.0f),17.0f,1.1f);
+        g.setColour(cream);
+        g.drawText("Drop a WAV here or choose Load WAV", waveformBounds,
+                   juce::Justification::centred);
     }
-    g.setColour(juce::Colour(forest));
-    g.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
-    const std::array<const char*,4> titles {{"GRAIN ENGINE","PITCH / VOICE","ENVELOPE","MODULATION"}};
-    for(std::size_t i=0;i<panels.size();++i)
-        g.drawText(titles[i],panels[i].getX()+14,panels[i].getY()+14,
-                   panels[i].getWidth()-28,25,juce::Justification::centredLeft);
-    g.setColour(juce::Colour(forest));
-    g.setFont(11.0f);
-    for(const auto& pair : std::array<std::pair<const char*,juce::Rectangle<int>>,3> {{
-        {"MODE",modeChoice.getBounds()},{"SHAPE",shapeChoice.getBounds()},
-        {"TARGET",destinationChoice.getBounds()}
+
+    const auto panels = controlPanels(deckBounds);
+    const std::array<const char*,4> names {{"GRAIN ENGINE", "PITCH / VOICE", "ENVELOPE", "MODULATION"}};
+    for (std::size_t i=0; i<panels.size(); ++i)
+    {
+        panel(panels[i]);
+        title(names[i], panels[i].withTrimmedLeft(17).withHeight(34));
+    }
+    const auto neural = juce::Rectangle<int>(59, 687, 566, 290);
+    const auto movement = juce::Rectangle<int>(649, 687, 612, 290);
+    const auto keys = juce::Rectangle<int>(59, 1000, 1202, 220);
+    panel(neural);
+    panel(movement);
+    panel(keys);
+    title("MIDI KEYBOARD", {82, 1010, 270, 32});
+    g.setColour(dark);
+    g.setFont(juce::Font(juce::FontOptions(12.0f)));
+    g.drawText("OUTPUT LEVEL", meterBounds.getX()-4, meterBounds.getY()-24,
+               meterBounds.getWidth()+4, 20, juce::Justification::centredLeft);
+    g.setColour(dark.withAlpha(0.25f));
+    g.fillRoundedRectangle(meterBounds.toFloat(), 5.0f);
+    g.setColour(displayedPeak >= 0.99f ? juce::Colour(cyan) : dark);
+    g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(
+        meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),5.0f);
+    g.setColour(dark);
+    g.setFont(juce::Font(juce::FontOptions(12.0f)));
+    for (const auto& item : std::array<std::pair<const char*,juce::Rectangle<int>>,3> {{
+        {"MODE", modeChoice.getBounds()}, {"SHAPE", shapeChoice.getBounds()},
+        {"TARGET", destinationChoice.getBounds()}
     }})
-        g.drawText(pair.first,pair.second.getX(),pair.second.getY()-18,
-                   pair.second.getWidth(),18,juce::Justification::centredLeft);
-    g.setColour(ivory);
-    g.drawText("OUTPUT LEVEL",meterBounds.getX()-120,meterBounds.getY()-8,112,22,juce::Justification::centredRight);
-    g.setColour(juce::Colour(ink).withAlpha(0.7f));
-    g.fillRoundedRectangle(meterBounds.toFloat(),4.0f);
-    g.setColour(displayedPeak>=0.99f?ivory:teal);
-    g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),4.0f);
+        g.drawText(item.first, item.second.getX(), item.second.getY()-17,
+                   item.second.getWidth(), 16, juce::Justification::centredLeft);
 }
 void DrizelAudioProcessorEditor::resized()
 {
     const int w = getWidth();
-    headerBounds = {20, 12, w - 40, 75};
-    loadButton.setBounds(w - 442, 24, 92, 32);
-    presetButton.setBounds(w - 342, 24, 104, 32);
-    saveButton.setBounds(w - 230, 24, 104, 32);
-    playButton.setBounds(w - 113, 24, 82, 32);
-    status.setBounds(35, 92, w - 70, 20);
-    waveformBounds = {46, 144, w - 92, 118};
+    headerBounds = {30, 20, w-60, 75};
+    loadButton.setBounds(w-540, 48, 110, 30);
+    presetButton.setBounds(w-420, 48, 115, 30);
+    saveButton.setBounds(w-295, 48, 115, 30);
+    playButton.setBounds(w-160, 39, 100, 44);
+    status.setBounds(92, 108, 660, 18);
+    waveformBounds = {91, 152, 630, 192};
+    selectionLabel.setBounds(91, 363, 145, 25);
+    selectionChoice.setBounds(240, 363, 188, 28);
 
-    selectionLabel.setBounds(40, 281, 140, 24);
-    selectionChoice.setBounds(185, 278, 190, 30);
-
-    deckBounds = {20, 318, w - 40, 193};
+    deckBounds = {59, 410, w-118, 235};
     const auto panels = controlPanels(deckBounds);
-    const auto place = [&](int index, int panel, int column, int count)
+    const auto place = [&](int index, int p, int column, int count)
     {
-        const auto p = panels[(std::size_t) panel];
-        const int innerLeft = p.getX() + 12;
-        const int innerWidth = p.getWidth() - 24;
-        const int cx = innerLeft + innerWidth * (2 * column + 1) / (2 * count);
-        constexpr int knobWidth = 76;
-        sliders[(std::size_t) index].setBounds(cx - knobWidth / 2,
-                                               p.getY() + 37, knobWidth, 84);
-        labels[(std::size_t) index].setBounds(cx - 43, p.getY() + 124, 86, 18);
+        const auto panel = panels[(std::size_t)p];
+        const int cx = panel.getX()+15+(panel.getWidth()-30)*(2*column+1)/(2*count);
+        sliders[(std::size_t)index].setBounds(cx-40,panel.getY()+47,80,93);
+        labels[(std::size_t)index].setBounds(cx-45,panel.getY()+144,90,20);
     };
-    place(0, 0, 0, 3);
-    place(2, 0, 1, 3);
-    place(3, 0, 2, 3);
-    place(1, 1, 0, 2);
-    place(8, 1, 1, 2);
-    place(6, 2, 0, 2);
-    place(7, 2, 1, 2);
-    place(4, 3, 0, 2);
-    place(5, 3, 1, 2);
+    place(0,0,0,3); place(2,0,1,3); place(3,0,2,3);
+    place(1,1,0,2); place(8,1,1,2);
+    place(6,2,0,2); place(7,2,1,2);
+    place(4,3,0,2); place(5,3,1,2);
+    modeChoice.setBounds(panels[1].getX()+14,panels[1].getBottom()-35,panels[1].getWidth()-28,26);
+    shapeChoice.setBounds(panels[3].getX()+12,panels[3].getBottom()-35,
+                          (panels[3].getWidth()-32)/2,26);
+    destinationChoice.setBounds(shapeChoice.getRight()+8,shapeChoice.getY(),
+                                shapeChoice.getWidth(),26);
 
-    const auto choiceBounds = [&](int panel, int column, int count)
+    neuralTitle.setBounds(81, 703, 180, 28);
+    neuralModeLabel.setBounds(81, 742, 160, 22);
+    dspModeButton.setBounds(258, 735, 92, 32);
+    neuralModeButton.setBounds(359, 735, 117, 32);
+    for (int i=0; i<3; ++i)
     {
-        const auto p = panels[(std::size_t) panel];
-        const int margin = 12, gap = 8;
-        const int width = (p.getWidth() - 2 * margin - (count - 1) * gap) / count;
-        return juce::Rectangle<int>(p.getX() + margin + column * (width + gap),
-                                     p.getY() + 162, width, 27);
-    };
-    modeChoice.setBounds(choiceBounds(1, 0, 1));
-    shapeChoice.setBounds(choiceBounds(3, 0, 2));
-    destinationChoice.setBounds(choiceBounds(3, 1, 2));
-
-    const int movementTop = 530;
-    movementTitle.setBounds(38, movementTop, 350, 22);
-    movementCommand.setBounds(38, movementTop + 27, w - 76, 36);
-    auto actions = juce::Rectangle<int>(38, movementTop + 69, w - 76, 29);
-    previewButton.setBounds(actions.removeFromLeft(95).reduced(2, 0));
-    applyButton.setBounds(actions.removeFromLeft(82).reduced(2, 0));
-    manualButton.setBounds(actions.removeFromLeft(119).reduced(2, 0));
+        const int cx = 153+i*184;
+        neuralSliders[(std::size_t)i].setBounds(cx-44, 787, 88, 102);
+        neuralLabels[(std::size_t)i].setBounds(cx-60, 899, 120, 22);
+    }
+    movementTitle.setBounds(670, 702, 280, 27);
+    movementCommand.setBounds(670, 734, 570, 30);
+    for (int i=0; i<6; ++i)
+    {
+        const int col=i%3, row=i/3, cx=747+col*189, y=769+row*82;
+        movementSettings[(std::size_t)i].setBounds(cx-39,y,78,68);
+        movementLabels[(std::size_t)i].setBounds(cx-74,y+66,148,19);
+    }
+    previewButton.setBounds(668, 942, 128, 28);
+    applyButton.setBounds(805, 942, 128, 28);
+    manualButton.setBounds(942, 942, 140, 28);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     if (speechButton.isVisible())
-        speechButton.setBounds(actions.removeFromLeft(125).reduced(2, 0));
+        speechButton.setBounds(1091, 942, 148, 28);
 #endif
-    movementStatus.setBounds(actions.reduced(5, 0));
+    movementStatus.setBounds(670, 917, 565, 20);
 
-    auto settingsRow = juce::Rectangle<int>(38, movementTop + 106, w - 76, 94);
-    const int settingWidth = settingsRow.getWidth() / int(movementSettings.size());
-    for (std::size_t i = 0; i < movementSettings.size(); ++i)
-    {
-        auto cell = settingsRow.removeFromLeft(settingWidth).reduced(3, 0);
-        movementLabels[i].setBounds(cell.removeFromTop(22));
-        movementSettings[i].setBounds(cell);
-    }
-
-    keyboardHeaderBounds = {20, 749, w - 40, 32};
-    meterBounds = {w - 207, 766, 164, 7};
-    keyboardRange.setBounds(35, 757, 195, 22);
-    octaveDown.setBounds(230, 757, 28, 22);
-    octaveUp.setBounds(262, 757, 28, 22);
-    midiHelp.setBounds(300, 757, w - 525, 22);
-    keyboard.setBounds(36, 786, w - 72, 67);
-    keyboard.setKeyWidth((w - 72) / 14.0f);
+    keyboardHeaderBounds = {59, 1000, 1202, 45};
+    keyboardRange.setBounds(82, 1037, 180, 22);
+    octaveDown.setBounds(270, 1037, 28, 22);
+    octaveUp.setBounds(303, 1037, 28, 22);
+    midiHelp.setBounds(347, 1037, 500, 22);
+    meterBounds = {1030, 1043, 190, 12};
+    keyboard.setBounds(83, 1072, 1147, 132);
+    keyboard.setKeyWidth(1147.0f/14.0f);
 }
 void DrizelAudioProcessorEditor::choosePreset(bool save)
 {
