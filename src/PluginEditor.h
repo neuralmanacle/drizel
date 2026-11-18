@@ -72,6 +72,11 @@ private:
     TransportButton playButton;
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
     juce::Label midiHelp, selectionLabel, keyboardRange;
+    juce::Label neuralTitle, neuralModeLabel;
+    juce::TextButton dspModeButton {"DSP"}, neuralModeButton {"NEURAL"};
+    std::array<juce::Slider, 3> neuralSliders;
+    std::array<juce::Label, 3> neuralLabels;
+    std::array<std::unique_ptr<SliderAttachment>, 3> neuralAttachments;
     juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice;
     juce::MidiKeyboardState keyboardState;
     juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
