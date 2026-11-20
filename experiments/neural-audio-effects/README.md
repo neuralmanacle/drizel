@@ -36,3 +36,24 @@ python -m pytest -q
 ```
 
 Outputs: `model.pt` (trusted local PyTorch weights), `report.json` (loss curve, train/held-out metrics), and held-out `*_predicted.wav`. `predict` preserves input sample rate and channel count. Inference is **offline only**. A model trained with one drive/mix setting does not generalize automatically to other settings; Step 14.3 can introduce conditioning. This model may not be bit-identical across hardware/PyTorch versions. The float WAV export clips predicted overs to [-1,1]; evaluation metrics use unclipped predictions.
+
+## Step 14.3 — Offline feasibility decision
+
+```bash
+OPENBLAS_NUM_THREADS=1 python feasibility.py output/feasibility
+```
+
+Uses the licensed recordings and checksums in the adjacent sample-analysis corpus.
+The model approximates a drive-conditioned tanh curve with an odd-symmetric
+single-hidden-layer network. It fits output weights by regularized least squares.
+The rain recording selects the hidden width. The guitar chord and claves recordings
+are held out until evaluation. Each file is peak-normalized once before applying
+the input level sweep.
+
+The run writes the model coefficients, a JSON report, and RMS-matched dry,
+DSP and neural WAVs at input peak 0.4 and drive 3. The offline block probe
+compares stereo work at 64, 128 and 256 frames and checks that splitting a
+block leaves the model output unchanged. The 10 kHz tone probe quantifies
+third-harmonic foldback at 44.1 and 48 kHz. See the
+[Step 14 retrospective](../../docs/devlog/2026-11-20-step-14-neural-saturation-verdict.md)
+for results and the deployment decision.

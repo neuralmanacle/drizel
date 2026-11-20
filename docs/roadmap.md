@@ -660,7 +660,8 @@ Build/test manual cyclic, stepped and irregular patterns before adding a model.
 
 ## Layer 14: Neural audio effects (optional research)
 
-**Status:** Planned.
+**Status:** Offline feasibility study complete. Keep the saturation model offline.
+See the [Step 14 retrospective](devlog/2026-11-20-step-14-neural-saturation-verdict.md).
 
 **Goal:** Determine whether a small neural effect adds useful sound within a measured budget.
 
