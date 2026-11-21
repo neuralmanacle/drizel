@@ -776,6 +776,35 @@ different problem setups and are not interchangeable "noise removal" features.
 Automotive qualification, compliance and production readiness are outside this
 instrument roadmap. Study relevant role requirements when pursuing that domain.
 
+### Android Automotive OS audio experiment (optional)
+
+**Goal.** Use Drizel as a repeatable media source to study playback, audio
+focus and routing on Android Automotive OS (AAOS). Start with a rendered WAV.
+Reuse the portable C++ grain engine once Layer 5's timing checks are complete.
+
+- [ ] **Innova Crysta playback baseline.** While safely parked, play a short
+  Drizel render from a phone over Bluetooth at low volume, or use USB if the
+  stereo supports WAV playback. Record the model year, head unit and connection
+  type, and observe playback during a navigation prompt or call. This exercises
+  the media route available on that stereo. Android Auto support alone does not
+  establish that the unit runs AAOS. Use the factory unit's normal media controls
+  and connections.
+- [ ] **Native AAOS playback.** Run a small media test app on an AAOS emulator
+  or dedicated development unit. Play the same render and log focus changes,
+  ducking, pauses and resumption during navigation prompts and call
+  interruptions where the setup supports them. Check the output zone on a
+  configured multi-zone target.
+- [ ] **Live rendering.** Run the grain engine in the test app and measure
+  callback time and dropouts. On physical test hardware, separately measure
+  the time from a control change to audible output. Explore Live Freeze or
+  push-to-talk modulation only if the test target grants microphone access and
+  exposes a usable input route.
+
+**Proof of work.** Record the target and software version, source and output
+route, interruption behavior and available timing measurements. Identify which
+observations came from the Crysta media check, emulator or development hardware.
+See the [AAOS audio overview](https://source.android.com/docs/automotive/audio).
+
 ## Dependency and next-work guidance
 
 The overview above gives prerequisite relationships, not a requirement to finish
