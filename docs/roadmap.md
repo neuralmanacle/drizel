@@ -782,7 +782,7 @@ instrument roadmap. Study relevant role requirements when pursuing that domain.
 focus and routing on Android Automotive OS (AAOS). Start with a rendered WAV.
 Reuse the portable C++ grain engine once Layer 5's timing checks are complete.
 
-- [ ] **Innova Crysta playback baseline.** While safely parked, play a short
+- [ ] **Car playback baseline.** While safely parked, play a short
   Drizel render from a phone over Bluetooth at low volume, or use USB if the
   stereo supports WAV playback. Record the model year, head unit and connection
   type, and observe playback during a navigation prompt or call. This exercises
@@ -802,7 +802,7 @@ Reuse the portable C++ grain engine once Layer 5's timing checks are complete.
 
 **Proof of work.** Record the target and software version, source and output
 route, interruption behavior and available timing measurements. Identify which
-observations came from the Crysta media check, emulator or development hardware.
+observations came from the car playback check, emulator or development hardware.
 See the [AAOS audio overview](https://source.android.com/docs/automotive/audio).
 
 ## Dependency and next-work guidance
