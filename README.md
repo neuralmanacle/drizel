@@ -2,7 +2,7 @@
 
 # Drizel
 
-**A granular synthesizer built with C++ and JUCE.**
+****A granular instrument that uses text and voice commands to shape grain modulation, both as a software plugin and as standalone hardware that granulates live audio.****
 
 Drizel explores sound design through sample playback, overlapping grains, and modulation. The granular DSP engine is being implemented from scratch, with JUCE providing the application and audio plugin framework.
 
