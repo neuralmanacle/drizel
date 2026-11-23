@@ -186,7 +186,7 @@ if(DRIZEL_BUILD_PLUGIN)
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
     juce_add_binary_data(DrizelLogoData SOURCES assets/drizel_logo.png)
-    target_link_libraries(DrizelPlugin PRIVATE DrizelLogoData)
+    target_link_libraries(DrizelPlugin PRIVATE drizel_core juce::juce_audio_utils DrizelLogoData)
     target_compile_definitions(DrizelPlugin PRIVATE DRIZEL_HAS_DRIZEL_LOGO=1)
 
     if(APPLE)
