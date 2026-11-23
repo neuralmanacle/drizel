@@ -56,10 +56,10 @@ acceptance remains tracked separately below.
 The [Layer 9 reference](experiments/sample-analysis/README.md) measures RMS,
 onset strength, spectral centroid and flatness on the WAV's sample timeline.
 
-Planned capabilities in Layers 11–16:
+Planned capabilities in Layers 11–15:
 
 - An evaluated audio-region model and local C++ inference.
-- A reduced embedded granular instrument, followed by optional on-device ML.
+- A standalone live-input granular effect for external gear, followed by optional on-device ML.
 - Optional promptable modulation policies (experimental): a model interprets
   descriptions of movement, and local modulation sources execute the accepted
   behaviour outside the model's inference loop
@@ -133,13 +133,15 @@ scope, example interpretations, execution design, and experiments still needed.
 
 See the [development roadmap](docs/roadmap.md) for existing layer status.
 
-### 6. Neural audio and embedded systems
+### 6. Embedded audio and on-device inference
 
-- [ ] Evaluate an optional neural audio effect against a DSP baseline (Layer 14)
-- [ ] Port a reduced granular instrument to real audio hardware (Layer 15)
-- [ ] Evaluate optional on-device audio inference and quantisation (Layer 16)
+- [ ] Prototype live-input granulation in the JUCE standalone app (Layer 14)
+- [ ] Port the live engine to an MCU with stereo line I/O, VST-inspired physical controls and MIDI sequencer sync (Layer 14)
+- [ ] Evaluate optional on-device audio inference and quantisation (Layer 15)
 
 ### Learning and proof throughout the roadmap
+
+The [junior DSP portfolio plan](learnings/audio-dsp-ml-curriculum.md#h-junior-dsp-portfolio) pairs the live-input Drizel demo with a MATLAB/Simulink-to-C/C++ filter port.
 
 | Layers | Engineering focus | Evidence |
 |---|---|---|
@@ -149,8 +151,7 @@ See the [development roadmap](docs/roadmap.md) for existing layer status.
 | 9–10 | Audio analysis and sample-aware playback | Feature plots, C++ parity and selection comparisons |
 | 11–12 | Audio ML and local deployment | Data/model cards, held-out metrics and C++ inference evidence |
 | 13 | Promptable modulation | Editable policies, replay and failure handling |
-| 14 | Optional neural audio effects | DSP/neural quality and real-time feasibility comparison |
-| 15–16 | Embedded audio and optional edge ML | Actual hardware playback, firmware, memory/timing and accuracy |
+| 14–15 | Live embedded audio and optional edge ML | Desktop reference, live hardware demo, firmware, timing/memory and model accuracy |
 
 The [roadmap](docs/roadmap.md) is the single capability and acceptance tracker.
 Use the [curriculum](learnings/audio-dsp-ml-curriculum.md) and

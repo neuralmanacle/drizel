@@ -24,9 +24,8 @@ a working feature does not automatically establish personal understanding.
 | 9–10 | [Python sample analysis](../experiments/sample-analysis/README.md) and [C++ guided grain selection](../docs/devlog/2026-11-11-step-11-sample-aware-playback.md) |
 | 11–12 | Dataset design, baselines, neural training, evaluation and C++ inference |
 | 13 | Validated language policies, preview and deterministic execution |
-| 14, optional | Causal neural effects and real-time feasibility |
-| 15 | Embedded audio, memory, codec/DMA and hardware profiling |
-| 16, optional | Quantisation and measured on-device inference |
+| 14 | Embedded audio, memory, codec/DMA and hardware profiling |
+| 15, optional | Quantisation and measured on-device inference |
 
 ## Plugin design/UI
 

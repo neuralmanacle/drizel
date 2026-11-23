@@ -102,8 +102,7 @@ listening, primary-machine host acceptance or measured callback headroom.
 | 9–10 | Python analysis, C++ parity and worker-prepared selection | DAW listening and host timing during sample replacement |
 | 11–12 | Analysis feature schema | Evaluated classifier then worker-side C++ inference |
 | 14 | Layer 6 routes and local policy executor | Validated numeric policy crosses into playback |
-| 15 | Optional output-stage experiment | Audio-rate inference needs its own timing/memory audit |
-| 15–16 | Framework-independent core | Hardware adapter, then optional tiny inference |
+| 14–15 | Framework-independent core | Hardware adapter, then optional tiny inference |
 
 Proposed source directories and experiment names in planning docs are not
 implemented APIs. Consult the [roadmap](roadmap.md), [architecture](architecture.md),

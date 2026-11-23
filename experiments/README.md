@@ -29,9 +29,8 @@ The C++ programs build through root CMake. Follow the [root build instructions](
 | `audio-region-classifier/` | 11 | Does a model improve on DSP/simple learned baselines? |
 | `cpp-inference/` | 12 | Do deployed preprocessing/predictions agree with Python? |
 | `llm-control/` | 13 | Are editable prompt-derived policies useful and reliable? |
-| `neural-effect/` | 14, optional | Does a small neural effect justify its runtime cost? |
-| `embedded-audio/` | 15 | Can the reduced engine run on actual hardware? |
-| `embedded-inference/` | 16, optional | Can a useful model coexist with the audio budget? |
+| `embedded-audio/` | 14 | Can the reduced engine run on actual hardware? |
+| `embedded-inference/` | 15, optional | Can a useful model coexist with the audio budget? |
 
 Create only the directory needed for the active experiment. Its README should
 state the hypothesis, input provenance, setup, exact commands, output location,

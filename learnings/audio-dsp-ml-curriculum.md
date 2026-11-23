@@ -81,7 +81,7 @@ why a confident prediction can be wrong; why a model can lose to a simple rule.
 and final held-out report. Learn CNNs on spectrograms and GRU/LSTM temporal models
 only when a measured limitation motivates their additional complexity.
 
-## E. Local inference and hybrid DSP/ML — Layers 12–14
+## E. Local inference and hybrid DSP/ML — Layers 12–13
 
 **Study:** preprocessing/export contracts, runtime/operator compatibility,
 causality, streaming state, feature-rate versus control-rate versus audio-rate
@@ -89,12 +89,11 @@ execution, model resets, numerical parity, CPU/RAM, failure recovery and version
 
 **Practice:** run the same golden features in Python and C++, compare predictions,
 and simulate missing or delayed results during playback. For Layer 13, manually
-execute a policy before introducing a language interpreter. For optional Layer 14,
-compare a small neural effect with a conventional DSP baseline offline first.
+execute a policy before introducing a language interpreter.
 
 **Explain:** training versus inference; audio classification versus language
-interpretation; why background analysis can tolerate latency while a synchronous
-effect must meet each audio deadline; why model output needs explicit validation.
+interpretation; how background results reach the audio callback without blocking
+it; why model output needs explicit validation.
 
 **Research reading:** RNNoise demonstrates hybrid DSP/neural speech enhancement;
 DDSP combines differentiable DSP components and learning. Neither is a drop-in
@@ -103,7 +102,7 @@ solution for Drizel, and the current grain scheduler is not a differentiable mod
 **Evidence:** export/parity report, integrated fallback demo and measured runtime.
 A language-model call is not evidence of training an audio model.
 
-## F. Embedded audio and edge ML — Layers 15–16
+## F. Embedded audio and edge ML — Layers 14–15
 
 **Study:** C/C++ cross compilation and linking, processor architecture, flash/RAM,
 stack/heap, interrupts, DMA, I²S/codecs, double buffering, cache coherency, FPU,
@@ -111,9 +110,11 @@ fixed-point scaling/saturation, profiling and basic RTOS scheduling.
 Then study weight/activation quantisation, representative calibration data,
 operator support and runtime memory planning.
 
-**Practice:** budget a source sample and grain pool before selecting a board;
-bring up audio first, port a reduced core, compare with a desktop render, then
-schedule a tiny classifier alongside audio. Compare float/quantised predictions.
+**Practice:** prototype live-input granulation on desktop. Budget the stereo
+capture history and grain pool before choosing an MCU. Bring up codec loopback,
+port the shared engine, compare the same input and controls against the desktop,
+and measure callback headroom and dropouts. For optional Layer 15, schedule a
+tiny classifier alongside audio and compare float/quantised predictions.
 
 **Explain:** why a dedicated AI accelerator is optional; feature extraction and
 activations in addition to weights; interrupt timing versus background work;
@@ -131,6 +132,32 @@ noise cancellation and acoustic feedback cancellation. Prototype system
 identification in simulation before pursuing a live acoustic loop. Beamforming,
 wake-word detection and speech enhancement are separate possible experiments.
 They are not mandatory features for a granular instrument.
+
+## H. Junior DSP portfolio
+
+Use the [Layer 14 desktop milestone](../docs/roadmap.md#layer-14-embedded-granular-instrument)
+to show real-time C++ and JUCE. Publish a short demo with a drum loop feeding
+Drizel and a DAW automating Position and Density. Include build instructions,
+a timing table and one debugging example involving buffer ownership, wrap or
+audio glitches. Add device measurements when the board is ready.
+
+Build a companion **48 kHz audio crossover** for DSP design and porting practice:
+
+1. State the crossover frequency, passband and stopband targets, and latency
+   budget. Model FIR and IIR versions in MATLAB/Simulink and compare magnitude,
+   phase, group delay and compute cost.
+2. Export the coefficients and implement C/C++ block processing. Compare an
+   impulse, sweep and music clip against the reference. Document tolerances,
+   coefficient precision and how you checked biquad stability.
+3. Benchmark the port. On a supported MCU, compare a vendor DSP library or a
+   fixed-point variant against the floating-point baseline. Record block size,
+   runtime or cycles, memory, numerical error and any saturation.
+4. Publish the model, coefficient export steps, source, plots and measurements.
+   Explain one design decision and what changed after profiling.
+
+The desktop demo and documented filter port are the first application-ready
+checkpoint. Lead with Drizel for audio C++ and plugin roles. Lead with the
+filter port for roles focused on algorithm design and embedded DSP.
 
 ## Study session format
 

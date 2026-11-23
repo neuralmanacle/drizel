@@ -8,7 +8,7 @@ of work. Study can proceed offline while integration waits for its prerequisites
 > **11 November 2026** — Step 9 delivers the playable MIDI instrument and presets
 > (Layers 7–8). Step 10 delivers the offline sample map and study (Layer 9).
 > Step 11 implements guided grain selection (Layer 10). DSP quality, general
-> modulation, DAW acceptance and Layers 11–16 have open work.
+> modulation, DAW acceptance and Layers 11–15 have open work.
 
 ## How to read this roadmap
 
@@ -46,14 +46,13 @@ of work. Study can proceed offline while integration waits for its prerequisites
 | 11 | Audio ML and region classification | 9 dataset and 10 baseline |
 | 12 | Local C++ model deployment | 10–11 |
 | 13 | Editable promptable modulation | 5–6; 10 for sample-aware prompts; 12 labels optional |
-| 14 | Neural audio-effect research (optional) | 2, 11–12 and measured callback headroom |
-| 15 | Reduced embedded granular instrument | Portable core in 0–6 and target feasibility |
-| 16 | Embedded audio inference (optional) | 11–12 and stable device audio in 15 |
+| 14 | Live-input embedded granular instrument | Portable core in 0–6, desktop reference and target feasibility |
+| 15 | Embedded audio inference (optional) | 11–12 and stable device audio in 14 |
 
 Layers 0–8 build the instrument and establish its quality and reliability.
 Layers 9–12 add sample understanding through DSP, then evaluated ML. Layer 13
-connects that foundation to language-based control. Layers 14–16 investigate
-neural effects and hardware without making them prerequisites for the instrument.
+connects that foundation to language-based control. Layer 14 brings live-input
+granulation to hardware. Layer 15 explores optional on-device inference.
 
 ## Plugin design/UI
 
@@ -658,80 +657,73 @@ Build/test manual cyclic, stepped and irregular patterns before adding a model.
 
 ---
 
-## Layer 14: Neural audio effects (optional research)
+## Layer 14: Embedded granular instrument
 
 **Status:** Planned.
 
-**Goal:** Determine whether a small neural effect adds useful sound within a measured budget.
+**Goal:** Build a standalone live granular effect for a drum machine, synth or
+mixer send. Capture stereo line input continuously and return a wet stereo grain
+mix. Use the VST control groups, labels and parameter ranges for the front panel.
 
-**Prerequisite:** Layers 2 and 11–12, plus measured callback headroom from Layer 5.
+**Prerequisite:** Portable core in Layers 0–6, a desktop live-input reference and
+a board feasibility study. Layers 11–13 can proceed independently.
 
-**Study:** nonlinear systems, waveshaping, temporal state, causal CNN/GRU models,
-spectral/time-domain losses, aliasing and sample-rate-dependent model behaviour.
+**Study:** Real-time C/C++, codec gain staging, I²S, DMA double buffering and
+cache coherency, circular buffers, MIDI timing, flash/RAM and cycle profiling.
 
-**Build and experiments**
+### Desktop prototype
 
-- [ ] Start with a small causal saturation/effect model and an explicit target,
-  dataset and simple DSP baseline; avoid making general timbre transfer the
-  first scope. Use held-out source recordings and level ranges.
-- [ ] Compare dry, conventional DSP and neural outputs at matched declared
-  levels; report error, listening results, sample-rate assumptions and latency.
-- [ ] Evaluate offline first. Only consider synchronous audio-rate inference
-  after proving fixed/bounded memory and execution, supported block/rate cases,
-  reset behaviour and callback headroom. Model loading remains off-thread.
-- [ ] If using an asynchronous audio path, specify buffering, added latency,
-  underrun behaviour and host latency compensation before integration.
-- [ ] Add safe bypass and repeat the host stress suite if an effect is integrated.
+- [ ] Add a live source to the shared C++ grain engine alongside WAV playback.
+  Use a preallocated stereo history buffer and bounded grain pool. Keep JUCE
+  audio device handling and UI in the desktop adapter. Preserve the existing
+  grain windows, interpolation and modulation where they apply.
+- [ ] Map Position to age within the readable history. Guard each grain's full
+  read span, including interpolation taps, against unwritten frames and frames
+  that will be overwritten before playback completes. Exercise startup, wrap,
+  longest grains and extreme pitches.
+- [ ] Feed a drum loop into the standalone app through virtual audio routing.
+  Automate Position and Density from a DAW. Run the same block processor offline
+  with a WAV, scripted controls and a fixed seed to produce reference renders.
+  Use 48 kHz stereo and 64-frame blocks as initial prototype targets.
 
-**Proof of work:** effect comparison, model/runtime report and measured acceptance or
-rejection. Rejected deployment stays an offline experiment, not a plugin feature.
+### Bench prototype and enclosure
 
-**Exit criteria:** a documented feasibility verdict; any shipped path passes its stated
-real-time and sound-quality criteria. This is not required for Layers 13 or 15.
+- [ ] Budget capture history, DMA buffers, grain state and stack before choosing
+  an MCU board and codec. Two seconds of stereo float32 history at 48 kHz uses
+  750 KiB. A 64-frame block at that rate allows about 1.33 ms of processing time.
+- [ ] Bring up stereo line input and output in codec loopback first. Measure
+  clipping headroom, channel routing, noise, latency and dropouts with real gear.
+  Then route codec ADC → I²S/DMA → live history → grain engine → I²S/DMA →
+  codec DAC. Keep allocation, blocking operations, display work and MIDI
+  parsing outside the audio callback.
+- [ ] Compare hardware output with the desktop reference within documented
+  tolerances. Record sample rate, block size, maximum observed callback time,
+  grain count, RAM/flash use and extended-run dropouts. Measure codec round-trip
+  latency separately from the time grains spend in the capture history.
+- [ ] Add physical controls based on the VST layout. Receive MIDI Clock,
+  Start/Stop and CC from a hardware sequencer. Verify automation and sync while
+  a drum machine feeds the stereo line inputs and the wet mix goes to a mixer.
+  Fit the proven board, jacks and controls in a prototype enclosure.
+- [ ] Revisit grain count and CPU headroom after profiling the MCU. Consider
+  FPGA offload only if a measured DSP bottleneck prevents the target workload.
 
----
+**Proof of work:** Desktop live-input demo, reproducible reference render,
+firmware and build steps, wiring/pin map, hardware demo with external gear,
+and a desktop/device comparison with timing and memory measurements.
 
-## Layer 15: Embedded granular instrument
-
-**Status:** Planned.
-
-**Goal:** Play a reduced Drizel engine on a real embedded audio device.
-
-**Prerequisite:** Portable core in Layers 0–6, measured desktop reference and a device feasibility study. No language model or neural effect is required.
-
-**Study:** embedded C/C++, cross compilation, memory maps, flash/RAM, codec/I²S,
-DMA double buffering, interrupts, FPU/fixed point, scheduling and debugging.
-
-**Build and experiments**
-
-- [ ] Estimate source storage, grain/window state, stack, audio buffers and CPU
-  before choosing hardware. Record board, processor, codec, toolchain, costs
-  and SDK licences; FPGA/NPU support is not required for the first port.
-- [ ] Start with codec loopback/test tone and dropout instrumentation, then port
-  a minimal core without JUCE, desktop file/UI dependencies or ML.
-- [ ] Use a bounded sample and reduced grain count; define storage access and
-  what must be resident in RAM. Keep slow storage and control I/O off the audio
-  deadline path; account for DMA/cache coherency on the chosen processor.
-- [ ] Compare output with desktop golden renders within justified tolerances;
-  document float/fixed-point saturation and scaling if fixed point is used.
-- [ ] Add a few physical controls or MIDI only after stable audio; measure cycles
-  per block, observed maximum, headroom, RAM/flash and extended-run dropouts.
-
-**Proof of work:** firmware/build instructions, wiring/pin map, memory/timing report,
-desktop/device audio comparison and video of the actual device making sound.
-
-**Exit criteria:** the documented reduced instrument runs on physical hardware within its
-budgets. A desktop simulator or successful cross-build alone is not hardware proof.
+**Exit criteria:** A drum machine or synth feeds the physical device, a sequencer
+clocks and automates it, and Drizel sustains wet stereo output at its documented
+voice count and latency within the measured processing and memory budgets.
 
 ---
 
-## Layer 16: Embedded audio inference (optional)
+## Layer 15: Embedded audio inference (optional)
 
 **Status:** Planned.
 
 **Goal:** Run useful audio inference alongside stable audio on the device.
 
-**Prerequisite:** Evaluated/deployed model in Layers 11–12 and stable physical-device audio from Layer 15.
+**Prerequisite:** Evaluated/deployed model in Layers 11–12 and stable physical-device audio from Layer 14.
 
 **Study:** integer quantisation, representative calibration data, operator
 support, activation memory, feature parity and inference scheduling.
@@ -780,8 +772,8 @@ instrument roadmap. Study relevant role requirements when pursuing that domain.
 
 The overview above gives prerequisite relationships, not a requirement to finish
 every research branch in numerical order. Layer 9 analysis can be studied offline;
-Layer 13's basic movement policies need Layers 5–6 but not a classifier. Layer 15
-can start from the portable core without Layers 11–14. Layers 14 and 16 are optional.
+Layer 13's basic movement policies need Layers 5–6 but not a classifier. Layer 14
+can start from the portable core without Layers 11–13. Layer 15 is optional.
 
 Close the existing Layer 5/7/8 acceptance gaps, finish Layer 6 routing and run
 Layer 2 quality experiments before integrating live analysis or inference.
@@ -799,6 +791,6 @@ Layer 10 selection and Layer 11 baseline/model comparison.
 | Understand the source | Layer 9 reproducible analysis and Layer 10 selection met |
 | Demonstrate audio ML | Layer 11 held-out comparison and Layer 12 C++ deployment met |
 | Describe movement | Layer 13 editable, reproducible policy acceptance met |
-| Demonstrate neural audio | Optional Layer 14 feasibility or integrated-effect evidence recorded |
-| Play on hardware | Layer 15 real-device audio, resources and firmware evidence met |
-| Run ML on hardware | Optional Layer 16 accuracy/cost and uninterrupted-audio evidence met |
+| Granulate live audio on desktop | Layer 14 standalone demo and reproducible reference render |
+| Play with hardware gear | Layer 14 line-level audio, sequencer sync and measured device budgets |
+| Run ML on hardware | Optional Layer 15 accuracy/cost and uninterrupted-audio evidence met |

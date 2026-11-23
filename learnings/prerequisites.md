@@ -38,10 +38,9 @@ Use the [curriculum](audio-dsp-ml-curriculum.md) and
 | [ ] | Baselines, PyTorch training and evaluation | 11 | Held-out comparison, confusion matrix and error analysis |
 | [ ] | Model export, C++ inference and recovery | 12 | Golden-input parity, resource costs and fallback demo |
 | [ ] | Prompt interpretation and deterministic policy execution | 13 | Schema validation, replay and late/stale response experiments |
-| [ ] | Causal neural audio effects | 14, optional | Offline DSP/neural comparison and deployment feasibility report |
-| [ ] | Embedded C/C++, codec/I²S, DMA and memory budgets | 15 | Actual board audio, wiring and target resource report |
-| [ ] | Fixed point and numerical scaling | 15 study; implementation if justified | Overflow/saturation example and float/reference comparison |
-| [ ] | Quantisation and embedded neural runtimes | 16, optional | Float/quantised comparison and measured on-device inference |
+| [ ] | Embedded C/C++, codec/I²S, DMA and memory budgets | 14 | Actual board audio, wiring and target resource report |
+| [ ] | Fixed point and numerical scaling | 14 study; implementation if justified | Overflow/saturation example and float/reference comparison |
+| [ ] | Quantisation and embedded neural runtimes | 15, optional | Float/quantised comparison and measured on-device inference |
 | [ ] | Adaptive filtering and speech DSP | Optional side study | Controlled LMS/NLMS experiment and explanation of AEC/ANC/AFC |
 
 Record completion dates and links to actual notes/reports when confirming a

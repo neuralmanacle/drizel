@@ -95,9 +95,8 @@ gates. The table distinguishes current execution paths from future work.
 | Region inference | Worker-side C++ model, versioned preprocessing and bounded result handoff | 12 |
 | Language interpretation | Worker, schema validation and UI preview before activation | 13 |
 | Numeric policy execution | Local engine source; continues without inference responses | 13 |
-| Neural audio effect | Optional causal path; separate bounded-memory/timing or buffered-latency design | 14 |
-| Embedded adapter | Hardware-specific audio/control I/O around the reduced independent core | 15 |
-| Embedded model | Budgeted preprocessing and inference scheduled alongside device audio | 16 |
+| Embedded adapter | Hardware-specific audio/control I/O around the reduced independent core | 14 |
+| Embedded model | Budgeted preprocessing and inference scheduled alongside device audio | 15 |
 
 ### Analysis and model handoff
 
@@ -113,11 +112,7 @@ and weights. Keep model validation and reclamation outside the callback.
 ### Different inference workloads
 
 Region analysis/classification and prompt interpretation stay outside the audio
-callback. They can produce future controls or immutable labels. A neural audio
-effect is different: synchronous inference consumes callback time, while an
-asynchronous effect introduces buffering and latency. Layer 14 requires a
-separate feasibility decision, reset/overload contract, allocation audit and
-actual timing measurements; it is not authorised by the worker-analysis design.
+callback. They can produce future controls or immutable labels.
 
 ### Hardware portability
 
@@ -125,4 +120,4 @@ Keep generic buffers, grain rendering, modulation and analysis contracts separat
 from JUCE, codec drivers and ML runtimes. Select an embedded target from sample,
 voice, buffer, model and activation budgets. Replace desktop services with explicit
 hardware adapters and limited configurations; porting the whole desktop UI is
-not the Layer 15 goal. Real device playback and measurement are acceptance gates.
+not the Layer 14 goal. Real device playback and measurement are acceptance gates.
