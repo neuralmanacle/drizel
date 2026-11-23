@@ -54,7 +54,12 @@ DrizelAudioProcessor::~DrizelAudioProcessor()
 void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     engine.prepare(sampleRate);
+    movement = {};
+    movement.prepare(sampleRate);
     instrument.prepare(sampleRate);
+    playingPanelKeys.fill(0);
+    heldHostKeys.fill(false);
+    hostKey.store(-1);
     previousMidiMode = midiMode->load() >= 0.5f;
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
@@ -76,13 +81,39 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     {
         midi.clear();
         instrument.reset();
+        playingPanelKeys.fill(0);
+        heldHostKeys.fill(false);
+        hostKey.store(-1);
         peak.store(0.0f, std::memory_order_relaxed);
         grainsActive.store(0, std::memory_order_relaxed);
         return;
     }
+    keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
     const bool useMidi = midiMode->load() >= 0.5f;
-    if (resetInstrument.exchange(false) || useMidi != previousMidiMode)
+    const bool recalledState = resetInstrument.exchange(false);
+    if (recalledState)
+        movement.restart();
+    if (recalledState || useMidi != previousMidiMode)
+    {
         instrument.reset();
+        playingPanelKeys.fill(0);
+        heldHostKeys.fill(false);
+        hostKey.store(-1);
+    }
+    if (useMidi)
+    {
+        for (std::size_t note = 0; note < panelKeys.size(); ++note)
+        {
+            const int velocity = panelKeys[note].load(std::memory_order_relaxed);
+            if (velocity == playingPanelKeys[note])
+                continue;
+            playingPanelKeys[note] = velocity;
+            if (velocity > 0)
+                instrument.noteOn(int(note), velocity / 127.0);
+            else if (!heldHostKeys[note])
+                instrument.noteOff(int(note));
+        }
+    }
     previousMidiMode = useMidi;
     instrument.setEnvelope(attack->load(), release->load());
     const int root = static_cast<int>(rootNote->load());
@@ -100,6 +131,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const double depth = lfoDepth->load();
     auto* left = buffer.getWritePointer(0); // Borrow only for this callback.
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
+    movement.accept(movementWord.load());
     float blockPeak = 0.0f;
     for (int i = 0; i < buffer.getNumSamples(); ++i) // No assumed maximum block size.
     {
@@ -112,16 +144,48 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             {
                 switch (data[0] & 0xf0)
                 {
-                    case 0x90: instrument.noteOn(data[1], data[2] / 127.0); break;
-                    case 0x80: instrument.noteOff(data[1]); break;
-                    case 0xb0: instrument.controller(data[1], data[2]); break;
+                    case 0x90:
+                    case 0x80:
+                        if (data[1] < heldHostKeys.size())
+                        {
+                            const auto note = data[1];
+                            const bool down = (data[0] & 0xf0) == 0x90 && data[2] > 0;
+                            heldHostKeys[note] = down;
+                            if (down)
+                            {
+                                instrument.noteOn(note, data[2] / 127.0);
+                                hostKey.store(note);
+                            }
+                            else
+                            {
+                                if (playingPanelKeys[note] == 0)
+                                    instrument.noteOff(note);
+                                if (hostKey.load() == note)
+                                {
+                                    const auto active = instrument.activeNote();
+                                    hostKey.store(active >= 0 && heldHostKeys[static_cast<std::size_t>(active)]
+                                                      ? active : -1);
+                                }
+                            }
+                        }
+                        break;
+                    case 0xb0:
+                        instrument.controller(data[1], data[2]);
+                        if (data[1] == 120 || data[1] == 123)
+                        {
+                            heldHostKeys.fill(false);
+                            for (auto& key : panelKeys) key.store(0, std::memory_order_relaxed);
+                            playingPanelKeys.fill(0);
+                            hostKey.store(-1);
+                        }
+                        break;
                     case 0xe0: instrument.pitchBend(data[1] | (data[2] << 7)); break;
                     default: break;
                 }
             }
         }
         modulation.set(route, std::min(1.0, depth + (useMidi ? instrument.wheel() : 0.0)));
-        const auto targets = modulation.apply(useMidi ? instrument.position(pos) : pos, semitones, lfo.next());
+        const auto targets = modulation.apply(movement.next(useMidi ? instrument.position(pos) : pos), semitones, lfo.next());
         const auto frame = engine.next(targets.position,
             targets.pitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
             useMidi ? instrument.density(grains) : grains, level, selection);
@@ -130,6 +194,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         left[i] = amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
         if (right != nullptr)
             right[i] = amplitude * frame.right;
+        const float magnitude = std::abs(left[i]);
         blockPeak = std::max(blockPeak, std::abs(left[i]));
         if (right != nullptr)
             blockPeak = std::max(blockPeak, std::abs(right[i]));
@@ -146,6 +211,22 @@ void DrizelAudioProcessor::requestSample(const juce::File& file)
     engine.expectRevision(++revision); // Newest request wins if a previous decode is still running.
     notify();
 }
+std::uint64_t DrizelAudioProcessor::sampleRequestRevision()
+{
+    const juce::ScopedLock lock(requestLock);
+    return revision;
+}
+
+bool DrizelAudioProcessor::applyMovementForSample(drizel::MovementPolicy policy,
+                                                std::uint64_t expectedRevision)
+{
+    const juce::ScopedLock lock(requestLock);
+    if (revision != expectedRevision || !policy.valid())
+        return false;
+    setMovement(policy);
+    return true;
+}
+
 DrizelAudioProcessor::SampleDisplayState DrizelAudioProcessor::loadedSampleState()
 {
     const juce::ScopedLock lock(requestLock);
@@ -211,6 +292,7 @@ void DrizelAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
         const juce::ScopedLock lock(requestLock);
         state.setProperty("samplePath", requestedPath, nullptr);
     }
+    state.setProperty("movementPolicyV1", juce::String(static_cast<juce::int64>(movementWord.load())), nullptr);
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destination);
 }
@@ -221,7 +303,6 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
         auto state = juce::ValueTree::fromXml(*xml);
         if (state.hasType(parameters.state.getType()))
         {
-            resetInstrument.store(true);
             // Older states predate the selection parameter. Restore its default
             // explicitly even if a guided mode was active before recall.
             if (!state.getChildWithProperty("id", "grainSelection").isValid())
@@ -231,11 +312,18 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
                 selectionState.setProperty("value", 0.0f, nullptr);
                 state.appendChild(selectionState, nullptr);
             }
+            const auto savedMovement = state.getProperty("movementPolicyV1").toString();
+            const auto packed = static_cast<std::uint64_t>(savedMovement.getLargeIntValue());
+            const auto restored = drizel::MovementPolicy::unpack(packed);
+            const auto canonical = juce::String(static_cast<juce::int64>(restored.packed()));
             parameters.replaceState(state); // JUCE updates the atomic parameter values.
             const auto path = state.getProperty("samplePath").toString();
             const juce::ScopedLock lock(requestLock);
+            setMovement(restored.valid() && savedMovement == canonical
+                            ? restored : drizel::MovementPolicy{});
             requestedPath = path; // An empty saved path also replaces the old source.
             status = path.isEmpty() ? "Load a WAV to begin" : "Restoring sample...";
+            resetInstrument.store(true);
             engine.expectRevision(++revision);
             notify(); // Decode/clear remains asynchronous.
         }
