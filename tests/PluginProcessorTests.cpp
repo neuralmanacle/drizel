@@ -22,6 +22,9 @@ int main()
     {
         DrizelAudioProcessor p;
         check(p.acceptsMidi(), "processor must advertise MIDI input");
+        check(p.getTotalNumInputChannels() == 2, "processor must accept stereo DAW audio");
+        check(p.isBusesLayoutSupported({juce::AudioChannelSet::stereo(), juce::AudioChannelSet::stereo()}),
+              "stereo input/output must be supported");
         p.prepareToPlay(1000, 64);
         drizel::SampleBuffer sample(1, 2000, 1000);
         for (std::size_t i = 0; i < sample.frameCount(); ++i) sample.channelData(0)[i] = 0.5f;
@@ -59,6 +62,31 @@ int main()
         p.processBlock(audio, midi);
         check(p.displayedHostNote() == -1, "host note highlight clears");
         check(audio.getMagnitude(8, 56) == 0, "last key release reaches silence");
+        set(p, "audioInputMode", 1); // Monitor mode passes host audio through.
+        set(p, "play", 0); // Isolate DAW audio from the granular engine.
+        audio.clear();
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < audio.getNumSamples(); ++i)
+                audio.setSample(ch, i, 0.25f);
+        p.processBlock(audio, midi);
+        check(std::abs(audio.getSample(0, 0) - 0.25f) < 0.001f,
+              "monitor mode must preserve DAW audio");
+        set(p, "audioInputMode", 2);
+        p.beginDawCapture();
+        audio.clear();
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < audio.getNumSamples(); ++i)
+                audio.setSample(ch, i, 0.2f);
+        p.processBlock(audio, midi);
+        p.stopDawCapture();
+        p.processBlock(audio, midi);
+        check(p.dawCaptureReady() && p.capturedFrames() == 64,
+              "DAW audio capture must finish at the next block boundary");
+        const auto capturedWav = directory.getChildFile("captured.wav");
+        check(p.finishDawCapture(capturedWav) && capturedWav.existsAsFile(),
+              "DAW input should export to WAV");
+        set(p, "play", 1);
+        set(p, "audioInputMode", 0);
         set(p, "position", 0.35f); set(p, "rootNote", 48); set(p, "lfoDepth", 0.7f);
         set(p, "grainSelection", 4);
         const auto preset = directory.getChildFile("patch.drizel");
