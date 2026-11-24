@@ -90,6 +90,7 @@ private:
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
     drizel::LiveGranulator liveGranulator; // Incoming DAW audio, processed in place.
+    double oscillatorSampleRate = 48000.0; // Set in prepareToPlay, safe for direct processor tests.
     double oscillatorPhase = 0.0;
     int oscillatorNote = 60;
     juce::CriticalSection requestLock; // Only UI/lifecycle/state/worker use this.
