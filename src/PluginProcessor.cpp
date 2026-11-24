@@ -142,6 +142,10 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
     const bool useMidi = midiMode->load() >= 0.5f;
     const bool useLiveEffect = !useMidi && inputMode == 3;
+    // When using the synth on an effect track, the incoming DAW audio must not
+    // leak into the oscillator/sample output unless Monitor was chosen.
+    if (useMidi && inputMode == 3)
+        buffer.clear();
     const bool recalledState = resetInstrument.exchange(false);
     if (recalledState)
         movement.restart();
@@ -244,7 +248,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             // Live input must be read before output overwrites the host buffer.
             // processBlock gets the same input/output buffer from JUCE.
             const float inL = left[i];
-            const float inR = right != nullptr ? right[i] : inL;
+            const float inR = inputChannels > 1 && right != nullptr ? right[i] : inL;
             const auto rendered = liveGranulator.process(inL, inR,
                 targets.position, targets.pitch, grains, level);
             frame = {rendered.left, rendered.right};
@@ -280,7 +284,6 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             left[i] += amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
             if (right != nullptr) right[i] += amplitude * frame.right;
         }
-        const float magnitude = std::abs(left[i]);
         blockPeak = std::max(blockPeak, std::abs(left[i]));
         if (right != nullptr)
             blockPeak = std::max(blockPeak, std::abs(right[i]));
