@@ -23,7 +23,7 @@ int main()
         DrizelAudioProcessor p;
         check(p.acceptsMidi(), "processor must advertise MIDI input");
         check(p.getTotalNumInputChannels() == 2, "processor must accept stereo DAW audio");
-        check(p.isBusesLayoutSupported({juce::AudioChannelSet::stereo(), juce::AudioChannelSet::stereo()}),
+        check(p.isBusesLayoutSupported(p.getBusesLayout()),
               "stereo input/output must be supported");
         p.prepareToPlay(1000, 64);
         drizel::SampleBuffer sample(1, 2000, 1000);
