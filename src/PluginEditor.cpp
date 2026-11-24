@@ -245,7 +245,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(box);
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
-    configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture"});
+    configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
     configureChoice(shapeChoice,{"Sine","Triangle"});
     configureChoice(destinationChoice,{"Off","Position","Pitch"});
     configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
