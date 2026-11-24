@@ -4,6 +4,7 @@
 #include "audio/Modulation.h"
 #include "audio/MidiInstrument.h"
 #include "audio/GrainMovement.h"
+#include "audio/LiveGranulator.h"
 
 // Host-facing wrapper. Audio owns the engine; the loader owns all disk I/O.
 class DrizelAudioProcessor : public juce::AudioProcessor, private juce::Thread
@@ -88,6 +89,9 @@ private:
     drizel::Lfo lfo;
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
+    drizel::LiveGranulator liveGranulator; // Incoming DAW audio, processed in place.
+    double oscillatorPhase = 0.0;
+    int oscillatorNote = 60;
     juce::CriticalSection requestLock; // Only UI/lifecycle/state/worker use this.
     std::atomic<float> peak {0.0f};
     std::atomic<int> grainsActive {0};
