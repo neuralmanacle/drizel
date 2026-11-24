@@ -148,6 +148,39 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         button->setLookAndFeel(&glassLook());
         button->setColour(juce::TextButton::textColourOffId,juce::Colour(mint));
     }
+    for (auto* button : {&captureButton, &useCaptureButton})
+    {
+        addAndMakeVisible(*button);
+        button->setLookAndFeel(&glassLook());
+        button->setColour(juce::TextButton::textColourOffId, juce::Colour(mint));
+    }
+    useCaptureButton.setEnabled(false);
+    captureButton.onClick = [this]
+    {
+        if (!captureRecording)
+        {
+            processor.beginDawCapture();
+            captureRecording = true;
+            captureButton.setButtonText("Stop DAW");
+            useCaptureButton.setEnabled(false);
+        }
+        else
+        {
+            processor.stopDawCapture();
+            captureRecording = false;
+            captureButton.setButtonText("Record DAW");
+        }
+    };
+    useCaptureButton.onClick = [this]
+    {
+        if (!processor.dawCaptureReady()) return;
+        auto destination = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getNonexistentChildFile("drizel-daw-capture", ".wav", false);
+        if (processor.finishDawCapture(destination))
+            useCaptureButton.setEnabled(false);
+        else
+            status.setText("DAW capture export failed", juce::dontSendNotification);
+    };
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
 
@@ -212,10 +245,12 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(box);
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
+    configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
     configureChoice(shapeChoice,{"Sine","Triangle"});
     configureChoice(destinationChoice,{"Off","Position","Pitch"});
     configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
     modeAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"midiMode",modeChoice);
+    audioInputAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"audioInputMode",audioInputChoice);
     shapeAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"lfoShape",shapeChoice);
     destinationAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"lfoDestination",destinationChoice);
     selectionAttachment=std::make_unique<ChoiceAttachment>(processor.parameters,"grainSelection",selectionChoice);
@@ -369,11 +404,11 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
     endWaveformGesture();
     for (auto& slider : sliders) slider.setLookAndFeel(nullptr);
     for (auto& slider : movementSettings) slider.setLookAndFeel(nullptr);
-    for (auto* button : {&loadButton, &saveButton, &presetButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
+    for (auto* button : {&loadButton, &saveButton, &presetButton, &captureButton, &useCaptureButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
 #endif
-    for (auto* box : {&modeChoice, &shapeChoice, &destinationChoice, &selectionChoice}) box->setLookAndFeel(nullptr);
+    for (auto* box : {&modeChoice, &audioInputChoice, &shapeChoice, &destinationChoice, &selectionChoice}) box->setLookAndFeel(nullptr);
     for (int i = 0; i < 13; ++i) if (computerNotesDown[static_cast<std::size_t>(i)]) processor.keyboardState.noteOff(1, 60+i, 0.0f);
 }
 
@@ -453,6 +488,8 @@ void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, in
 }
 void DrizelAudioProcessorEditor::timerCallback()
 {
+    if (!captureRecording && processor.dawCaptureReady())
+        useCaptureButton.setEnabled(true);
     status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
     if (applyButton.isEnabled() && previewRevision != processor.sampleRequestRevision())
     {
@@ -610,6 +647,9 @@ void DrizelAudioProcessorEditor::resized()
     saveButton.setBounds(w - 230, 24, 104, 32);
     playButton.setBounds(w - 113, 24, 82, 32);
     status.setBounds(35, 74, w - 390, 20);
+    captureButton.setBounds(w - 355, 72, 105, 27);
+    useCaptureButton.setBounds(w - 245, 72, 125, 27);
+    audioInputChoice.setBounds(w - 235, 105, 185, 27);
     waveformBounds = {35, 132, w - 389, 119};
 
     selectionLabel.setBounds(35, 284, 140, 24);

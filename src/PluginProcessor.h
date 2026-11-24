@@ -4,6 +4,7 @@
 #include "audio/Modulation.h"
 #include "audio/MidiInstrument.h"
 #include "audio/GrainMovement.h"
+#include "audio/LiveGranulator.h"
 
 // Host-facing wrapper. Audio owns the engine; the loader owns all disk I/O.
 class DrizelAudioProcessor : public juce::AudioProcessor, private juce::Thread
@@ -48,6 +49,11 @@ public:
     bool savePreset(const juce::File&); // Message thread file I/O.
     bool loadPreset(const juce::File&);
     void requestSample(const juce::File&); // Control thread only; queues a path.
+    void beginDawCapture();
+    void stopDawCapture() noexcept { captureState.store(3, std::memory_order_release); }
+    bool finishDawCapture(const juce::File&); // Export finished DAW capture as WAV.
+    bool dawCaptureReady() const noexcept { return captureReady.load(std::memory_order_acquire); }
+    int capturedFrames() const noexcept { return capturedFrameCount.load(std::memory_order_acquire); }
     struct SampleDisplayState { juce::String path; std::uint64_t revision; };
     SampleDisplayState loadedSampleState(); // Message-thread snapshot under loader lock.
     float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
@@ -67,6 +73,13 @@ private:
     bool previousMidiMode = false;
     std::atomic<bool> resetInstrument {false};
     std::atomic<float>* midiMode = nullptr;
+    std::atomic<float>* audioInputMode = nullptr;
+    juce::AudioBuffer<float> capturedAudio;
+    double captureSampleRate = 48000.0;
+    int captureWritePosition = 0;
+    std::atomic<int> captureState {0}; // 0 idle, 1 capturing, 2 arm, 3 stop.
+    std::atomic<int> capturedFrameCount {0};
+    std::atomic<bool> captureReady {false};
     std::atomic<float>* attack = nullptr;
     std::atomic<float>* release = nullptr;
     std::atomic<float>* rootNote = nullptr;
@@ -76,6 +89,10 @@ private:
     drizel::Lfo lfo;
     drizel::ModulationRouter modulation;
     drizel::RealtimeEngine engine; // Destroyed only after the worker has joined.
+    drizel::LiveGranulator liveGranulator; // Incoming DAW audio, processed in place.
+    double oscillatorSampleRate = 48000.0; // Set in prepareToPlay, safe for direct processor tests.
+    double oscillatorPhase = 0.0;
+    int oscillatorNote = 60;
     juce::CriticalSection requestLock; // Only UI/lifecycle/state/worker use this.
     std::atomic<float> peak {0.0f};
     std::atomic<int> grainsActive {0};

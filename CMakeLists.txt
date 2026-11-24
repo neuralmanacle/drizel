@@ -181,7 +181,7 @@ if(DRIZEL_BUILD_PLUGIN)
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
-        IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        IS_SYNTH FALSE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
         COPY_PLUGIN_AFTER_BUILD FALSE)
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
@@ -216,4 +216,11 @@ if(BUILD_TESTING AND DRIZEL_BUILD_PLUGIN)
         $<TARGET_PROPERTY:DrizelPlugin,COMPILE_DEFINITIONS>)
     target_compile_features(drizel_processor_tests PRIVATE cxx_std_17)
     add_test(NAME plugin_processor COMMAND drizel_processor_tests)
+endif()
+
+if(BUILD_TESTING)
+    add_executable(drizel_live_granular_tests tests/LiveGranulatorTests.cpp)
+    target_link_libraries(drizel_live_granular_tests PRIVATE drizel_core)
+    target_compile_options(drizel_live_granular_tests PRIVATE ${DRIZEL_WARNINGS})
+    add_test(NAME live_granular_input COMMAND drizel_live_granular_tests)
 endif()
