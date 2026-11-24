@@ -104,6 +104,8 @@ public:
         return {safe(frame.left), safe(frame.right)};
     }
 
+    bool hasActiveSample() const noexcept { return active_ != nullptr; }
+
     std::size_t activeGrains() const noexcept
     {
         return active_ != nullptr ? active_->cloud.activeCount() : 0;
