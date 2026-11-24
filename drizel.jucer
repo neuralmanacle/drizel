@@ -9,9 +9,9 @@
 <JUCERPROJECT id="KI85iV" name="drizel" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="0.1.0"
               companyName="Neural Manacle" companyEmail="neuralmanacle@gmail.com"
-              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn" pluginName="drizel"
+              pluginCharacteristicsValue="pluginWantsMidiIn" pluginName="drizel"
               pluginDesc="a custom granular synthesizer" pluginManufacturer="Neural Manacle"
-              pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aumu'" cppLanguageStandard="17" headerPath="src">
+              pluginManufacturerCode="NeuM" pluginCode="Drzl" pluginAUMainType="'aufx'" cppLanguageStandard="17" headerPath="src">
   <!-- Project-tree membership is explicit; adding a folder on disk alone
        does not add its files here. All tracked repository files are listed
        for browsing. Processor/editor and WAV adapter .cpp files compile in the plugin.
