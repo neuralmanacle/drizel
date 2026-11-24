@@ -48,6 +48,11 @@ public:
     bool savePreset(const juce::File&); // Message thread file I/O.
     bool loadPreset(const juce::File&);
     void requestSample(const juce::File&); // Control thread only; queues a path.
+    void beginDawCapture();
+    void stopDawCapture() noexcept { captureState.store(3, std::memory_order_release); }
+    bool finishDawCapture(const juce::File&); // Export finished DAW capture as WAV.
+    bool dawCaptureReady() const noexcept { return captureReady.load(std::memory_order_acquire); }
+    int capturedFrames() const noexcept { return capturedFrameCount.load(std::memory_order_acquire); }
     struct SampleDisplayState { juce::String path; std::uint64_t revision; };
     SampleDisplayState loadedSampleState(); // Message-thread snapshot under loader lock.
     float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
@@ -67,6 +72,13 @@ private:
     bool previousMidiMode = false;
     std::atomic<bool> resetInstrument {false};
     std::atomic<float>* midiMode = nullptr;
+    std::atomic<float>* audioInputMode = nullptr;
+    juce::AudioBuffer<float> capturedAudio;
+    double captureSampleRate = 48000.0;
+    int captureWritePosition = 0;
+    std::atomic<int> captureState {0}; // 0 idle, 1 capturing, 2 arm, 3 stop.
+    std::atomic<int> capturedFrameCount {0};
+    std::atomic<bool> captureReady {false};
     std::atomic<float>* attack = nullptr;
     std::atomic<float>* release = nullptr;
     std::atomic<float>* rootNote = nullptr;
