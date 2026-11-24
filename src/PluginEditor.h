@@ -48,6 +48,8 @@ private:
     drizel::MovementPolicy proposedMovement;
     std::uint64_t previewRevision = 0;
     juce::TextButton loadButton {"Load WAV"};
+    juce::TextButton captureButton {"Record DAW"}, useCaptureButton {"Use DAW take"};
+    bool captureRecording = false;
     class TransportButton : public juce::TextButton
     {
     public:
@@ -72,7 +74,7 @@ private:
     TransportButton playButton;
     juce::TextButton saveButton {"Save preset"}, presetButton {"Load preset"};
     juce::Label midiHelp, selectionLabel, keyboardRange;
-    juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice;
+    juce::ComboBox selectionChoice, shapeChoice, destinationChoice, modeChoice, audioInputChoice;
     juce::MidiKeyboardState keyboardState;
     juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
     juce::TextButton octaveDown {"−"}, octaveUp {"+"};
@@ -87,7 +89,7 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::array<std::unique_ptr<SliderAttachment>, 9> attachments;
     using ChoiceAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
-    std::unique_ptr<ChoiceAttachment> shapeAttachment, destinationAttachment, modeAttachment, selectionAttachment;
+    std::unique_ptr<ChoiceAttachment> shapeAttachment, destinationAttachment, modeAttachment, selectionAttachment, audioInputAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
     juce::AudioFormatManager formats;
     juce::AudioThumbnailCache cache {4};
