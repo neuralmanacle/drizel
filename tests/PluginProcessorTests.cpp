@@ -33,6 +33,10 @@ int main()
         p.processBlock(oscillatorAudio, oscillatorMidi);
         check(oscillatorAudio.getMagnitude(0, 64) > 0.001f,
               "MIDI mode must generate sound without a loaded WAV");
+        for (int ch = 0; ch < oscillatorAudio.getNumChannels(); ++ch)
+            for (int i = 0; i < oscillatorAudio.getNumSamples(); ++i)
+                check(std::isfinite(oscillatorAudio.getSample(ch, i)),
+                      "fallback oscillator must generate finite samples");
         oscillatorMidi.addEvent(juce::MidiMessage::allSoundOff(1), 0);
         p.processBlock(oscillatorAudio, oscillatorMidi);
         set(p, "midiMode", 0);
