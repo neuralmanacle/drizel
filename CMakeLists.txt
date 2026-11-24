@@ -181,7 +181,7 @@ if(DRIZEL_BUILD_PLUGIN)
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
-        IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        IS_SYNTH FALSE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
         COPY_PLUGIN_AFTER_BUILD FALSE)
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
