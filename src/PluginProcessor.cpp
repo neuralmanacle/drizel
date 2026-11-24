@@ -59,6 +59,7 @@ void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
     engine.prepare(sampleRate);
     liveGranulator.prepare(sampleRate);
 
+    oscillatorSampleRate = sampleRate;
     oscillatorPhase = 0.0;
     oscillatorNote = 60;
     capturedAudio.setSize(2, static_cast<int>(sampleRate * 10.0), false, false, true);
@@ -268,7 +269,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                 oscillatorNote = instrument.activeNote();
             const double hz = 440.0 * std::exp2((oscillatorNote - 69.0
                 + instrument.pitchOffset(oscillatorNote) + semitones) / 12.0);
-            oscillatorPhase += hz / getSampleRate();
+            oscillatorPhase += hz / oscillatorSampleRate;
             oscillatorPhase -= std::floor(oscillatorPhase);
             constexpr double pi = 3.14159265358979323846;
             const float tone = 0.25f * static_cast<float>(std::sin(2.0 * pi * oscillatorPhase));
