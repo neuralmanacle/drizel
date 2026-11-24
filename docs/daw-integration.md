@@ -1,29 +1,18 @@
-# Ableton / DAW input testing (experimental)
+# Drizel as an Ableton audio effect + MIDI synth
 
-Drizel can now accept a stereo or mono host audio input while retaining MIDI input support. It cannot access arbitrary clips in the Ableton project: the DAW must route and play the audio/MIDI to the plugin.
+**Live FX (default)**: Place Drizel on an audio track, play audio, and select **Live FX** in DAW audio. It consumes the incoming samples directly into a 2-second rolling stereo history, renders 80ms grains in real time, and replaces the input with transformed granular audio. Position selects a 0.4–1.1 second look-behind; pitch and density reshape the output. Allow roughly 0.4 seconds of input history before wet audio starts. No WAV loading or capture button is required. This first implementation is fully wet, with no dry/wet knob.
 
-## Build
+**MIDI (sound generation)**: Select **MIDI** instead of **Drone**. A loaded WAV is played through the existing grain instrument when MIDI channel-1 notes arrive. If no WAV is loaded, a simple built-in sine oscillator produces a tone, gated by the existing MIDI attack/release envelope. The MIDI mode overrides Live FX processing, so place a second Drizel instance on an audio track when you also want live granular audio processing.
 
-Use CMake with `-DDRIZEL_BUILD_PLUGIN=ON`, or regenerate the Xcode project using `drizel.jucer`. The plugin is now classified as an **audio effect** (not a synth), so Live should allow insertion on an audio track. This changes the AU component type as well; rescan and replace old plugin instances, retaining a backup of project files.
+**Other DAW audio modes**: Audio monitor passes host audio through while the existing loaded-WAV engine can play. Audio capture retains the experimental record/stop/use-take workflow. Audio off keeps the original loaded-WAV behavior. These modes are optional, not the primary Live FX path.
 
-## Audio track: use incoming audio
+**Ableton MIDI routing limitation**: This plugin is registered as a VST3 audio effect to accept host audio. Ableton may not route MIDI clips directly to it in all configurations; testing the actual version and routing is necessary. A conventional VST3 cannot inspect an entire future Ableton MIDI clip.
 
-1. Put Drizel on an audio track with an audio clip (or route another track's audio to it).
-2. In the Drizel interface, choose **Audio monitor** to hear the incoming audio in addition to Drizel's synthesized grains. **Audio off** is the previous synth-only behavior.
-3. For a sample captured from the DAW, choose **Audio capture**, click **Record DAW**, start playback in Live, then click **Stop DAW**. After audio has processed another block, click **Use DAW take**. This exports a temporary WAV and loads it into Drizel's existing sample loader.
-4. Capture is limited to 10 seconds at the current sample rate. The capture buffer is allocated in `prepareToPlay`; writes and stopping happen inside the audio callback, while WAV exporting happens outside it.
+## Local verification
 
-The WAV is saved to the system temporary directory and may be deleted by the OS; for durable samples, export and copy the take from there separately. DAW capture is **not** project-wide sample discovery.
+1. Build the new branch and rescan Drizel as an audio effect.
+2. Put a drum or guitar clip on an audio track; insert Drizel and choose **Live FX** with **Drone** mode. Play the track for at least 0.4s; vary POSITION, PITCH and DENSITY to hear grain transformations.
+3. Use a separate instance with **MIDI** mode. Route channel-1 notes from a MIDI-capable host or Ableton routing. Confirm a sine tone without any WAV, then load a WAV and verify granular note playback.
+4. Check mono/stereo, 44.1/48/96kHz, varying buffer sizes, project save/restore, offline rendering, and CPU use.
 
-## MIDI routing
-
-Drizel already handles incoming MIDI from the host on **channel 1**. Select **MIDI** instead of **Drone** in the plugin UI, load a WAV or use a captured DAW take, and send notes to the plugin. Ableton Live's MIDI routing to a VST3 audio effect varies by track and version; use an upstream MIDI instrument chain/routing configuration or a MIDI file/keyboard in a host that supports MIDI-to-effect routing. A generic VST3 cannot read the entire future MIDI clip from Live.
-
-## Validation
-
-- Build both the CMake VST3 and the Projucer-generated plugin and check for errors.
-- Run `ctest --test-dir build --output-on-failure` for the offline tests; with `DRIZEL_BUILD_PLUGIN=ON`, run the processor integration test.
-- In Live, inspect the FX versus Instrument category, MIDI routing, sample loading, stereo monitoring, ten-second capture, and restart/reload behavior.
-- In the processor tests, audio monitor preserves host audio, captured DAW audio exports as WAV, and incoming channel-1 MIDI triggers a note.
-
-**Note:** These changes have not been compiled or run on an Ableton/macOS installation from this session. Treat this branch as a reviewable prototype rather than a verified release.
+**This is an unverified development branch:** code has not been compiled on a Mac or tested in Ableton from this session.
