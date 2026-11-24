@@ -15,7 +15,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoShape", 1}, "LFO shape", juce::StringArray{"Sine", "Triangle"}, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoDestination", 1}, "LFO destination", juce::StringArray{"Off", "Position", "Pitch"}, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"midiMode", 1}, "Mode", juce::StringArray{"Drone", "MIDI"}, 0));
-    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"audioInputMode", 1}, "DAW audio", juce::StringArray{"Off", "Monitor", "Capture"}, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"audioInputMode", 1}, "DAW audio", juce::StringArray{"Off", "Monitor", "Capture", "Live FX"}, 3));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"attack", 1}, "Attack (seconds)", 0.001f, 2.0f, 0.01f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"release", 1}, "Release (seconds)", 0.005f, 5.0f, 0.2f));
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID{"rootNote", 1}, "Root MIDI note", 0, 127, 60));
@@ -57,6 +57,10 @@ DrizelAudioProcessor::~DrizelAudioProcessor()
 void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     engine.prepare(sampleRate);
+    liveGranulator.prepare(sampleRate);
+
+    oscillatorPhase = 0.0;
+    oscillatorNote = 60;
     capturedAudio.setSize(2, static_cast<int>(sampleRate * 10.0), false, false, true);
     captureSampleRate = sampleRate;
     captureWritePosition = 0;
@@ -119,8 +123,8 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             captureReady.store(true, std::memory_order_release);
         }
     }
-    if (inputMode != 1)
-        buffer.clear(); // Synthesis-only or capture mode: avoid passing through incoming audio.
+    if (inputMode != 1 && inputMode != 3)
+        buffer.clear(); // Keep live input in place until each sample has been read.
     else
         for (int ch = inputChannels; ch < outputChannels; ++ch)
             buffer.clear(ch, 0, buffer.getNumSamples());
@@ -137,6 +141,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     }
     keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
     const bool useMidi = midiMode->load() >= 0.5f;
+    const bool useLiveEffect = !useMidi && inputMode == 3;
     const bool recalledState = resetInstrument.exchange(false);
     if (recalledState)
         movement.restart();
@@ -233,14 +238,48 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         }
         modulation.set(route, std::min(1.0, depth + (useMidi ? instrument.wheel() : 0.0)));
         const auto targets = modulation.apply(movement.next(useMidi ? instrument.position(pos) : pos), semitones, lfo.next());
-        const auto frame = engine.next(targets.position,
-            targets.pitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
-            useMidi ? instrument.density(grains) : grains, level, selection);
-        // Apply the note envelope AFTER the engine's gain smoother: exact silent gate.
+        drizel::GrainFrame frame;
+        if (useLiveEffect)
+        {
+            // Live input must be read before output overwrites the host buffer.
+            // processBlock gets the same input/output buffer from JUCE.
+            const float inL = left[i];
+            const float inR = right != nullptr ? right[i] : inL;
+            const auto rendered = liveGranulator.process(inL, inR,
+                targets.position, targets.pitch, grains, level);
+            frame = {rendered.left, rendered.right};
+        }
+        else
+        {
+            frame = engine.next(targets.position,
+                targets.pitch + (useMidi ? instrument.pitchOffset(root) : 0.0),
+                useMidi ? instrument.density(grains) : grains, level, selection);
+        }
+        // MIDI mode remains a sound-generating instrument. Without a WAV loaded,
+        // a sine oscillator supplies an audible built-in source.
         const float amplitude = useMidi ? static_cast<float>(instrument.nextAmplitude()) : 1.0f;
-        left[i] += amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
-        if (right != nullptr)
-            right[i] += amplitude * frame.right;
+        if (useMidi && !engine.hasActiveSample())
+        {
+            if (instrument.activeNote() >= 0)
+                oscillatorNote = instrument.activeNote();
+            const double hz = 440.0 * std::exp2((oscillatorNote - 69.0
+                + instrument.pitchOffset(oscillatorNote) + semitones) / 12.0);
+            oscillatorPhase += hz / getSampleRate();
+            oscillatorPhase -= std::floor(oscillatorPhase);
+            constexpr double pi = 3.14159265358979323846;
+            const float tone = 0.25f * static_cast<float>(std::sin(2.0 * pi * oscillatorPhase));
+            frame = {tone * level, tone * level};
+        }
+        if (useLiveEffect)
+        {
+            left[i] = amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
+            if (right != nullptr) right[i] = amplitude * frame.right;
+        }
+        else
+        {
+            left[i] += amplitude * (right != nullptr ? frame.left : 0.5f * (frame.left + frame.right));
+            if (right != nullptr) right[i] += amplitude * frame.right;
+        }
         const float magnitude = std::abs(left[i]);
         blockPeak = std::max(blockPeak, std::abs(left[i]));
         if (right != nullptr)
@@ -248,7 +287,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     }
     midi.clear(); // Input consumed; this instrument does not emit MIDI.
     peak.store(blockPeak, std::memory_order_relaxed);
-    grainsActive.store(static_cast<int>(engine.activeGrains()), std::memory_order_relaxed);
+    grainsActive.store(static_cast<int>(useLiveEffect ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
 }
 void DrizelAudioProcessor::beginDawCapture()
 {
