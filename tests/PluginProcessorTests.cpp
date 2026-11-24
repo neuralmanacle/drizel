@@ -26,6 +26,16 @@ int main()
         check(p.isBusesLayoutSupported(p.getBusesLayout()),
               "stereo input/output must be supported");
         p.prepareToPlay(1000, 64);
+        set(p, "midiMode", 1);
+        juce::AudioBuffer<float> oscillatorAudio(2, 64);
+        juce::MidiBuffer oscillatorMidi;
+        oscillatorMidi.addEvent(juce::MidiMessage::noteOn(1, 69, 1.0f), 0);
+        p.processBlock(oscillatorAudio, oscillatorMidi);
+        check(oscillatorAudio.getMagnitude(0, 64) > 0.001f,
+              "MIDI mode must generate sound without a loaded WAV");
+        oscillatorMidi.addEvent(juce::MidiMessage::allSoundOff(1), 0);
+        p.processBlock(oscillatorAudio, oscillatorMidi);
+        set(p, "midiMode", 0);
         drizel::SampleBuffer sample(1, 2000, 1000);
         for (std::size_t i = 0; i < sample.frameCount(); ++i) sample.channelData(0)[i] = 0.5f;
         const auto wav = directory.getChildFile("source.wav");
