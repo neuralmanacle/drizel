@@ -35,6 +35,11 @@ private:
     DrizelAudioProcessor& processor;
     juce::ParameterAttachment waveformPositionAttachment;
     bool waveformGestureActive = false;
+    juce::String uiFont;
+    std::unique_ptr<juce::LookAndFeel_V4> editorLook;
+    juce::ComboBox fontChoice;
+    void applyFont();
+    juce::Font uiTypeface(float height, int style = juce::Font::plain) const;
     juce::TextEditor movementCommand;
     juce::TextButton previewButton {"Preview"}, applyButton {"Apply"}, manualButton {"Manual scan"};
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
