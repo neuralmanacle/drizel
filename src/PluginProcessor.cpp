@@ -105,7 +105,12 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     // Preserve incoming DAW samples before the synthesiser writes its output.
     const int inputChannels = getTotalNumInputChannels();
     const int outputChannels = getTotalNumOutputChannels();
-    const int inputMode = static_cast<int>(audioInputMode->load(std::memory_order_relaxed));
+    const int inputMode =
+#if JucePlugin_IsSynth
+        0; // A synth has no audio-input bus to monitor or capture.
+#else
+        static_cast<int>(audioInputMode->load(std::memory_order_relaxed));
+#endif
     const int capacity = capturedAudio.getNumSamples();
     if (captureState.load(std::memory_order_acquire) == 2)
     {
