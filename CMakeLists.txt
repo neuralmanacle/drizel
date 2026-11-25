@@ -181,7 +181,8 @@ if(DRIZEL_BUILD_PLUGIN)
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
-        IS_SYNTH FALSE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        IS_SYNTH FALSE NEEDS_MIDI_INPUT FALSE NEEDS_MIDI_OUTPUT FALSE
+        VST3_CATEGORIES Fx AU_MAIN_TYPE kAudioUnitType_Effect
         COPY_PLUGIN_AFTER_BUILD FALSE)
     # Audio FX: the original product remains available on audio tracks.
     juce_generate_juce_header(DrizelPlugin)
@@ -209,6 +210,7 @@ if(DRIZEL_BUILD_PLUGIN)
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE DrzI
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel instrument"
         IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        VST3_CATEGORIES Instrument Synth AU_MAIN_TYPE kAudioUnitType_MusicDevice
         COPY_PLUGIN_AFTER_BUILD FALSE)
     juce_generate_juce_header(DrizelInstrument)
     target_sources(DrizelInstrument PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
