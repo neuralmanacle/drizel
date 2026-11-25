@@ -35,9 +35,8 @@ private:
     DrizelAudioProcessor& processor;
     juce::ParameterAttachment waveformPositionAttachment;
     bool waveformGestureActive = false;
-    juce::String uiFont;
+    const juce::String uiFont {"Menlo"};
     std::unique_ptr<juce::LookAndFeel_V4> editorLook;
-    juce::ComboBox fontChoice;
     void applyFont();
     juce::Font uiTypeface(float height, int style = juce::Font::plain) const;
     juce::TextEditor movementCommand;
