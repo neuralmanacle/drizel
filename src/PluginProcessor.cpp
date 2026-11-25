@@ -14,7 +14,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"lfoDepth", 1}, "LFO depth", 0.0f, 1.0f, 0.0f));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoShape", 1}, "LFO shape", juce::StringArray{"Sine", "Triangle"}, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoDestination", 1}, "LFO destination", juce::StringArray{"Off", "Position", "Pitch"}, 0));
-    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"midiMode", 1}, "Mode", juce::StringArray{"Drone", "MIDI"}, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"midiMode", 1}, "Mode", juce::StringArray{"Drone", "MIDI"}, JucePlugin_IsSynth ? 1 : 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"audioInputMode", 1}, "DAW audio", juce::StringArray{"Off", "Monitor", "Capture", "Live FX"}, 3));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"attack", 1}, "Attack (seconds)", 0.001f, 2.0f, 0.01f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"release", 1}, "Release (seconds)", 0.005f, 5.0f, 0.2f));
@@ -218,7 +218,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             // Inspect borrowed bytes, avoiding MidiMessage copies (SysEx can allocate).
             const auto message = *event++;
             const auto* data = message.data;
-            if (useMidi && message.numBytes >= 3 && (data[0] & 0x0f) == 0)
+            if (useMidi && message.numBytes >= 3)
             {
                 switch (data[0] & 0xf0)
                 {
@@ -294,7 +294,11 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             oscillatorPhase -= std::floor(oscillatorPhase);
             constexpr double pi = 3.14159265358979323846;
             const float tone = 0.25f * static_cast<float>(std::sin(2.0 * pi * oscillatorPhase));
-            frame = {tone * level, tone * level};
+            const auto wet = liveGranulator.process(tone * amplitude, tone * amplitude,
+                targets.position, targets.pitch - semitones, instrument.density(grains), level);
+            // Immediate note attack plus granular texture as the history fills.
+            frame = {0.35f * tone * level + 0.65f * wet.left,
+                     0.35f * tone * level + 0.65f * wet.right};
         }
         if (useLiveEffect)
         {
@@ -312,7 +316,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     }
     midi.clear(); // Input consumed; this instrument does not emit MIDI.
     peak.store(blockPeak, std::memory_order_relaxed);
-    grainsActive.store(static_cast<int>(useLiveEffect ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
+    grainsActive.store(static_cast<int>((useLiveEffect || (useMidi && !engine.hasActiveSample())) ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
 }
 void DrizelAudioProcessor::beginDawCapture()
 {
