@@ -78,6 +78,12 @@ private:
     juce::MidiKeyboardState keyboardState;
     juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
     juce::TextButton octaveDown {"−"}, octaveUp {"+"};
+    juce::TextButton keyboardToggle {"Show MIDI keyboard"};
+    bool keyboardExpanded = false;
+    static constexpr int compactEditorWidth = 1100;
+    static constexpr int collapsedEditorHeight = 885;
+    static constexpr int expandedEditorHeight = 1000;
+    void setKeyboardExpanded(bool expanded);
     int keyboardOctave = 3, highlightedNote = -1;
     std::array<bool, 13> computerNotesDown {};
     juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;
