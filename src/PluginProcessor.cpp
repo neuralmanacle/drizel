@@ -25,8 +25,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
 }
 
 DrizelAudioProcessor::DrizelAudioProcessor()
-    : AudioProcessor(BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true)
-                                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties()
+#if JucePlugin_IsSynth
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#else
+                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+                     ),
       Thread("Drizel sample loader"), parameters(*this, nullptr, "DrizelState", makeParameters())
 {
     static_assert(std::atomic<float>::is_always_lock_free, "Parameters must be lock-free");
@@ -85,8 +91,13 @@ bool DrizelAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 {
     const auto input = layouts.getMainInputChannelSet();
     const auto output = layouts.getMainOutputChannelSet();
+#if JucePlugin_IsSynth
+    return input.isDisabled()
+        && (output == juce::AudioChannelSet::mono() || output == juce::AudioChannelSet::stereo());
+#else
     return (input == juce::AudioChannelSet::mono() || input == juce::AudioChannelSet::stereo())
         && (output == juce::AudioChannelSet::mono() || output == juce::AudioChannelSet::stereo());
+#endif
 }
 void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
@@ -141,8 +152,13 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         return;
     }
     keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
-    const bool useMidi = midiMode->load() >= 0.5f;
-    const bool useLiveEffect = !useMidi && inputMode == 3;
+    const bool useMidi =
+#if JucePlugin_IsSynth
+        true; // Dedicated instrument always responds to DAW MIDI events.
+#else
+        midiMode->load() >= 0.5f;
+#endif
+    const bool useLiveEffect = !useMidi && inputMode == 3 && inputChannels > 0;
     // When using the synth on an effect track, the incoming DAW audio must not
     // leak into the oscillator/sample output unless Monitor was chosen.
     if (useMidi && inputMode == 3)
