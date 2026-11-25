@@ -17,7 +17,12 @@ public:
     juce::String family;
     juce::Typeface::Ptr getTypefaceForFont(const juce::Font& font) override
     {
-        if (family.isNotEmpty()) return juce::Typeface::createSystemTypefaceFor(font.withTypefaceName(family));
+        if (family.isNotEmpty())
+        {
+            auto selectedFont = font;
+            selectedFont.setTypefaceName(family);
+            return juce::Typeface::createSystemTypefaceFor(selectedFont);
+        }
         return juce::LookAndFeel_V4::getTypefaceForFont(font);
     }
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
@@ -566,7 +571,8 @@ static std::array<juce::Rectangle<int>,4> controlPanels(juce::Rectangle<int> dec
 juce::Font DrizelAudioProcessorEditor::uiTypeface(float height, int style) const
 {
     auto font = juce::Font(juce::FontOptions(height, style));
-    return uiFont.isEmpty() ? font : font.withTypefaceName(uiFont);
+    if (uiFont.isNotEmpty()) font.setTypefaceName(uiFont);
+    return font;
 }
 void DrizelAudioProcessorEditor::applyFont()
 {
