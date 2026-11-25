@@ -183,6 +183,7 @@ if(DRIZEL_BUILD_PLUGIN)
         FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
         IS_SYNTH FALSE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
         COPY_PLUGIN_AFTER_BUILD FALSE)
+    # Audio FX: the original product remains available on audio tracks.
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
     juce_add_binary_data(DrizelLogoData SOURCES assets/drizel_logo.png)
@@ -197,6 +198,29 @@ if(DRIZEL_BUILD_PLUGIN)
         target_link_libraries(DrizelPlugin PRIVATE "-framework Speech" "-framework AVFoundation")
     endif()
     target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0)
+
+    # A distinct synth identity allows DAWs such as Live to list Drizel on MIDI
+    # tracks without sacrificing the effect's stereo audio input buses.
+    juce_add_plugin(DrizelInstrument
+        ${DRIZEL_SPEECH_OPTIONS}
+        COMPANY_NAME "Neural Manacle"
+        BUNDLE_ID "com.neuralmanacle.drizel.instrument"
+        PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE DrzI
+        FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel instrument"
+        IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        COPY_PLUGIN_AFTER_BUILD FALSE)
+    juce_generate_juce_header(DrizelInstrument)
+    target_sources(DrizelInstrument PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
+    target_link_libraries(DrizelInstrument PRIVATE drizel_core juce::juce_audio_utils DrizelLogoData)
+    target_compile_definitions(DrizelInstrument PRIVATE DRIZEL_HAS_DRIZEL_LOGO=1)
+    if(APPLE)
+        target_sources(DrizelInstrument PRIVATE src/MovementSpeech.mm)
+        set_source_files_properties(src/MovementSpeech.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+        target_compile_definitions(DrizelInstrument PUBLIC DRIZEL_MAC_SPEECH=1)
+        target_link_libraries(DrizelInstrument PRIVATE "-framework Speech" "-framework AVFoundation")
+    endif()
+    target_compile_definitions(DrizelInstrument PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 endif()
 
