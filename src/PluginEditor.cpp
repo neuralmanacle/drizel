@@ -257,10 +257,6 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         box.setLookAndFeel(editorLook.get());
         addAndMakeVisible(box);
     };
-    configureChoice(fontChoice, {"System default", "Helvetica Neue", "Avenir Next", "Futura", "Menlo", "Georgia", "Baskerville"});
-    fontChoice.setSelectedId(3, juce::dontSendNotification);
-    uiFont = "Avenir Next";
-    fontChoice.onChange = [this] { uiFont = fontChoice.getSelectedId() == 1 ? juce::String{} : fontChoice.getText(); applyFont(); };
     configureChoice(modeChoice,{"Drone","MIDI"});
     configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
     configureChoice(shapeChoice,{"Sine","Triangle"});
@@ -434,7 +430,7 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
 #endif
-    for (auto* box : {&modeChoice, &audioInputChoice, &shapeChoice, &destinationChoice, &selectionChoice, &fontChoice}) box->setLookAndFeel(nullptr);
+    for (auto* box : {&modeChoice, &audioInputChoice, &shapeChoice, &destinationChoice, &selectionChoice}) box->setLookAndFeel(nullptr);
     keyboardToggle.setLookAndFeel(nullptr);
     setLookAndFeel(nullptr);
     for (int i = 0; i < 13; ++i) if (computerNotesDown[static_cast<std::size_t>(i)]) processor.keyboardState.noteOff(1, 60+i, 0.0f);
@@ -708,7 +704,6 @@ void DrizelAudioProcessorEditor::resized()
     captureButton.setBounds(w - 355, 72, 105, 27);
     useCaptureButton.setBounds(w - 245, 72, 125, 27);
     audioInputChoice.setBounds(w - 310, 264, 280, 28);
-    fontChoice.setBounds(280, 24, 170, 32);
     waveformBounds = {35, 132, w - 389, 119};
 
     selectionLabel.setBounds(35, 284, 140, 24);
