@@ -389,8 +389,11 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
              &keyboard, &keyboardRange, &octaveDown, &octaveUp, &movementTitle})
         addAndMakeVisible(component);
     setKeyboardOctave(3);
+    addAndMakeVisible(keyboardToggle);
+    keyboardToggle.setColour(juce::TextButton::textColourOffId, juce::Colour(forest));
+    keyboardToggle.onClick = [this] { setKeyboardExpanded(!keyboardExpanded); };
 
-    setSize(1100, 1000);
+    setKeyboardExpanded(false);
     startTimerHz(30);
     timerCallback();
 }
@@ -638,6 +641,17 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(displayedPeak >= 0.99f ? teal : juce::Colour(0xff557b64));
     g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),4.0f);
 }
+void DrizelAudioProcessorEditor::setKeyboardExpanded(bool expanded)
+{
+    keyboardExpanded = expanded;
+    keyboardToggle.setButtonText(expanded ? "Hide MIDI keyboard" : "Show MIDI keyboard");
+    for (juce::Component* component : std::array<juce::Component*, 5>{
+             &keyboard, &keyboardRange, &octaveDown, &octaveUp, &midiHelp})
+        component->setVisible(expanded);
+    setSize(compactEditorWidth, expanded ? expandedEditorHeight : collapsedEditorHeight);
+    repaint();
+}
+
 void DrizelAudioProcessorEditor::resized()
 {
     const int w = getWidth();
@@ -717,13 +731,14 @@ void DrizelAudioProcessorEditor::resized()
         movementLabels[i].setBounds(cx - cellWidth / 2, y + 98, cellWidth, 18);
     }
 
-    keyboardPanelBounds = {20, 839, w - 40, 143};
+    keyboardPanelBounds = {20, 839, w - 40, keyboardExpanded ? 143 : 28};
     keyboardHeaderBounds = keyboardPanelBounds.withHeight(32);
-    meterBounds = {w - 207, 856, 164, 8};
-    keyboardRange.setBounds(35, 847, 195, 22);
-    octaveDown.setBounds(230, 847, 28, 22);
-    octaveUp.setBounds(262, 847, 28, 22);
-    midiHelp.setBounds(300, 847, w - 635, 22);
+    keyboardToggle.setBounds(35, 842, 184, 22);
+    meterBounds = {w - 207, 850, 164, 8};
+    keyboardRange.setBounds(230, 847, 195, 22);
+    octaveDown.setBounds(430, 847, 28, 22);
+    octaveUp.setBounds(462, 847, 28, 22);
+    midiHelp.setBounds(500, 847, w - 735, 22);
     keyboard.setBounds(36, 877, w - 72, 89);
     keyboard.setKeyWidth((w - 72) / 14.0f);
 }
