@@ -431,6 +431,7 @@ void DrizelAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
         state.setProperty("samplePath", requestedPath, nullptr);
     }
     state.setProperty("movementPolicyV1", juce::String(static_cast<juce::int64>(movementWord.load())), nullptr);
+    state.setProperty("keyboardExpanded", keyboardExpanded.load(), nullptr);
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destination);
 }
@@ -455,6 +456,7 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
             const auto restored = drizel::MovementPolicy::unpack(packed);
             const auto canonical = juce::String(static_cast<juce::int64>(restored.packed()));
             parameters.replaceState(state); // JUCE updates the atomic parameter values.
+            keyboardExpanded.store(static_cast<bool>(state.getProperty("keyboardExpanded", false)));
             const auto path = state.getProperty("samplePath").toString();
             const juce::ScopedLock lock(requestLock);
             setMovement(restored.valid() && savedMovement == canonical
