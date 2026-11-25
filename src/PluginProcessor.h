@@ -59,6 +59,8 @@ public:
     float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
     int activeGrainCount() const noexcept { return grainsActive.load(std::memory_order_relaxed); }
     juce::String loadStatus(); // UI thread only; never queried by processBlock.
+    void setKeyboardVisible(bool visible) noexcept { keyboardExpanded.store(visible); }
+    bool keyboardVisible() const noexcept { return keyboardExpanded.load(); }
     juce::MidiKeyboardState keyboardState; // On-screen MIDI keyboard shares the audio event stream.
     juce::AudioProcessorValueTreeState parameters; // Automatable controls/state.
 
@@ -70,6 +72,7 @@ private:
     std::array<int, 128> playingPanelKeys {};
     std::array<bool, 128> heldHostKeys {};
     std::atomic<int> hostKey {-1};
+    std::atomic<bool> keyboardExpanded {false};
     bool previousMidiMode = false;
     std::atomic<bool> resetInstrument {false};
     std::atomic<float>* midiMode = nullptr;
