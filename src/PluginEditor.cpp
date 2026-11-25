@@ -253,7 +253,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(box);
     };
     configureChoice(fontChoice, {"System default", "Helvetica Neue", "Avenir Next", "Futura", "Menlo", "Georgia", "Baskerville"});
-    fontChoice.setSelectedId(1, juce::dontSendNotification);
+    fontChoice.setSelectedId(3, juce::dontSendNotification);
+    uiFont = "Avenir Next";
     fontChoice.onChange = [this] { uiFont = fontChoice.getSelectedId() == 1 ? juce::String{} : fontChoice.getText(); applyFont(); };
     configureChoice(modeChoice,{"Drone","MIDI"});
     configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
