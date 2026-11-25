@@ -172,16 +172,17 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     {
         if (!captureRecording)
         {
+            renderedOutput = juce::File{};
             processor.beginDawCapture();
             captureRecording = true;
-            captureButton.setButtonText("Stop DAW");
+            captureButton.setButtonText("Stop capture");
             useCaptureButton.setEnabled(false);
         }
         else
         {
             processor.stopDawCapture();
             captureRecording = false;
-            captureButton.setButtonText("Record DAW");
+            captureButton.setButtonText("Capture");
         }
     };
     useCaptureButton.onClick = [this]
@@ -190,10 +191,37 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         auto destination = juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getNonexistentChildFile("drizel-daw-capture", ".wav", false);
         if (processor.finishDawCapture(destination))
+        {
+            selectSampleMode();
             useCaptureButton.setEnabled(false);
+        }
         else
             status.setText("DAW capture export failed", juce::dontSendNotification);
     };
+    for (auto* button : {&renderButton, &dragOutputButton})
+    {
+        addAndMakeVisible(*button);
+        button->setLookAndFeel(editorLook.get());
+        button->setColour(juce::TextButton::textColourOffId, juce::Colour(mint));
+    }
+    renderButton.onClick = [this]
+    {
+        if (recordingOutput) processor.stopDawCapture();
+        else if (!processor.captureActive())
+        {
+            renderedOutput = juce::File{};
+            processor.beginDawCapture(true);
+            recordingOutput = true;
+            renderButton.setButtonText("Stop output");
+        }
+    };
+    dragOutputButton.onClick = [this]
+    {
+        if (renderedOutput.existsAsFile())
+            juce::DragAndDropContainer::performExternalDragDropOfFiles(
+                juce::StringArray{renderedOutput.getFullPathName()}, false, &dragOutputButton);
+    };
+    dragOutputButton.setEnabled(false);
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
 
@@ -258,7 +286,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         addAndMakeVisible(box);
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
-    configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
+    configureChoice(audioInputChoice,{"Sample","Audio monitor","Audio capture","Live FX"});
     configureChoice(shapeChoice,{"Sine","Triangle"});
     configureChoice(destinationChoice,{"Off","Position","Pitch"});
     configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
@@ -278,7 +306,10 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
             [safe](const juce::FileChooser& dialog)
             {
                 if(safe != nullptr && dialog.getResult().existsAsFile())
+                {
+                    safe->selectSampleMode();
                     safe->processor.requestSample(dialog.getResult());
+                }
             });
     };
     // Keyboard note shortcuts are observed even while a knob or button has focus.
@@ -426,7 +457,7 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
     endWaveformGesture();
     for (auto& slider : sliders) slider.setLookAndFeel(nullptr);
     for (auto& slider : movementSettings) slider.setLookAndFeel(nullptr);
-    for (auto* button : {&loadButton, &saveButton, &presetButton, &captureButton, &useCaptureButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
+    for (auto* button : {&loadButton, &saveButton, &presetButton, &captureButton, &useCaptureButton, &renderButton, &dragOutputButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
 #endif
@@ -508,13 +539,44 @@ bool DrizelAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray&
 void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, int, int)
 {
     if (isInterestedInFileDrag(files) && juce::File(files[0]).existsAsFile())
+    {
+        selectSampleMode();
         processor.requestSample(juce::File(files[0]));
+    }
+}
+void DrizelAudioProcessorEditor::selectSampleMode()
+{
+#if !JucePlugin_IsSynth
+    audioInputChoice.setSelectedId(1, juce::sendNotificationSync);
+    modeChoice.setSelectedId(1, juce::sendNotificationSync);
+#endif
 }
 void DrizelAudioProcessorEditor::timerCallback()
 {
-    if (!captureRecording && processor.dawCaptureReady())
-        useCaptureButton.setEnabled(true);
-    status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
+    if (recordingOutput && !processor.captureActive())
+    {
+        recordingOutput = false;
+        renderButton.setButtonText("Record output");
+        auto file = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getNonexistentChildFile("Drizel-Output", ".wav", false);
+        if (processor.exportCapture(file, false)) renderedOutput = file;
+    }
+    if (captureRecording && !processor.captureActive())
+    {
+        captureRecording = false;
+        captureButton.setButtonText("Capture");
+    }
+    useCaptureButton.setEnabled(!recordingOutput && !processor.captureActive() && processor.dawCaptureReady()
+                                && processor.capturedFrames() > 0 && !renderedOutput.existsAsFile());
+    captureButton.setEnabled(!recordingOutput && (captureRecording || !processor.captureActive()));
+    renderButton.setEnabled(!captureRecording && (recordingOutput || !processor.captureActive()));
+    dragOutputButton.setEnabled(renderedOutput.existsAsFile());
+    const bool live = !JucePlugin_IsSynth && audioInputChoice.getSelectedId() == 4;
+    status.setText((recordingOutput ? juce::String("Recording processed output") :
+                    captureRecording ? juce::String("Recording input") :
+                    live ? juce::String("Live DAW audio") :
+                    JucePlugin_IsSynth && processor.loadedSampleState().path.isEmpty() ? juce::String("MIDI oscillator ready") :
+                    processor.loadStatus()) + presetStatus, juce::dontSendNotification);
     if (applyButton.isEnabled() && previewRevision != processor.sampleRequestRevision())
     {
         applyButton.setEnabled(false);
@@ -622,13 +684,14 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.setFont(uiTypeface(14.0f));
         g.drawFittedText(value,area.reduced(10,2),juce::Justification::centredLeft,1);
     };
+    const bool live = !JucePlugin_IsSynth && audioInputChoice.getSelectedId() == 4;
     const auto sampleName=processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false);
     drawReadout({waveformBounds.getX(),waveformBounds.getY()-32,310,27},
-                "INPUT  /  " + (sampleName.isEmpty() ? juce::String("No WAV") : sampleName));
+                "INPUT  /  " + (live ? juce::String("DAW audio") : sampleName.isEmpty() ? juce::String(JucePlugin_IsSynth ? "Oscillator" : "No WAV") : sampleName));
     drawReadout({waveformBounds.getRight()-190,waveformBounds.getY()-32,190,27},
                 "ACTIVE GRAINS  " + juce::String(processor.activeGrainCount()));
     g.setColour(teal);
-    if(thumbnail.getTotalLength()>0.0)
+    if(!live && thumbnail.getTotalLength()>0.0)
     {
         thumbnail.drawChannels(g,waveformBounds,0.0,thumbnail.getTotalLength(),1.0f);
         const float pos=processor.parameters.getRawParameterValue("position")->load();
@@ -638,7 +701,22 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(amber);
         g.drawVerticalLine(x,static_cast<float>(waveformBounds.getY()),static_cast<float>(waveformBounds.getBottom()));
     }
-    else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
+    else if (!live && !JucePlugin_IsSynth)
+        g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
+    if (live || JucePlugin_IsSynth)
+    {
+        for (int i = 0; i < 128; ++i)
+        {
+            const float x = waveformBounds.getX() + i * waveformBounds.getWidth() / 128.0f;
+            for (int out = 0; out < 2; ++out)
+            {
+                const float y = waveformBounds.getY() + waveformBounds.getHeight() * (out ? 0.75f : 0.25f);
+                const float h = juce::jlimit(0.0f, 1.0f, processor.waveformPeak(out != 0, i)) * waveformBounds.getHeight() * 0.22f;
+                g.setColour(out ? ivory : amber);
+                g.drawLine(x, y-h, x, y+h, 2.0f);
+            }
+        }
+    }
     const auto paintPanel = [&g](juce::Rectangle<int> bounds)
     {
         g.setColour(juce::Colour(0xfff6edd9));
@@ -701,10 +779,18 @@ void DrizelAudioProcessorEditor::resized()
     saveButton.setBounds(w - 230, 24, 104, 32);
     playButton.setBounds(w - 113, 24, 82, 32);
     status.setBounds(35, 74, w - 390, 20);
-    captureButton.setBounds(w - 355, 72, 105, 27);
-    useCaptureButton.setBounds(w - 245, 72, 125, 27);
+    captureButton.setBounds(35, 250, 110, 25);
+    useCaptureButton.setBounds(151, 250, 125, 25);
+    renderButton.setBounds(282, 250, 150, 25);
+    dragOutputButton.setBounds(438, 250, 115, 25);
+#if JucePlugin_IsSynth
+    captureButton.setVisible(false);
+    useCaptureButton.setVisible(false);
+    audioInputChoice.setVisible(false);
+    modeChoice.setEnabled(false);
+#endif
     audioInputChoice.setBounds(w - 310, 264, 280, 28);
-    waveformBounds = {35, 132, w - 389, 119};
+    waveformBounds = {35, 132, w - 389, 112};
 
     selectionLabel.setBounds(35, 284, 140, 24);
     selectionChoice.setBounds(181, 281, 190, 30);
