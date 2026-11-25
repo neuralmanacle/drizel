@@ -20,11 +20,11 @@ int main()
         processor.processBlock(audio, midi);
         if (audio.getMagnitude(0, 256) <= 0.001f)
             throw std::runtime_error("Instrument must generate MIDI sound without a WAV");
-        std::cout << "Instrument MIDI routing passed\\n";
+        std::cout << "Instrument MIDI routing passed\n";
     }
     catch (const std::exception& ex)
     {
-        std::cerr << ex.what() << '\\n';
+        std::cerr << ex.what() << '\n';
         return 1;
     }
     return 0;
