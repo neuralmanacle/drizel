@@ -52,7 +52,11 @@ private:
     drizel::MovementPolicy proposedMovement;
     std::uint64_t previewRevision = 0;
     juce::TextButton loadButton {"Load WAV"};
-    juce::TextButton captureButton {"Record DAW"}, useCaptureButton {"Use DAW take"};
+    juce::TextButton captureButton {"Capture"}, useCaptureButton {"Use capture"};
+    juce::TextButton renderButton {"Record output"}, dragOutputButton {"Drag WAV"};
+    juce::File renderedOutput;
+    bool recordingOutput = false;
+    void selectSampleMode();
     bool captureRecording = false;
     class TransportButton : public juce::TextButton
     {
