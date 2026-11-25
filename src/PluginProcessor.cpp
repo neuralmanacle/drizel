@@ -80,7 +80,7 @@ void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
     playingPanelKeys.fill(0);
     heldHostKeys.fill(false);
     hostKey.store(-1);
-    previousMidiMode = midiMode->load() >= 0.5f;
+    previousMidiMode = inputMode != 3 && midiMode->load() >= 0.5f;
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
     requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
@@ -123,7 +123,9 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         captureState.store(0, std::memory_order_release);
         captureReady.store(true, std::memory_order_release);
     }
-    if (inputMode == 2 && captureState.load(std::memory_order_acquire) == 1)
+    const int historyIndex = historyCursor.load(std::memory_order_relaxed);
+    inputHistory[static_cast<std::size_t>(historyIndex)].store(inputChannels > 0 ? buffer.getMagnitude(0, 0, buffer.getNumSamples()) : 0.0f);
+    if (!captureProcessed.load() && captureState.load(std::memory_order_acquire) == 1)
     {
         const int frames = juce::jmin(capacity - captureWritePosition, buffer.getNumSamples());
         if (frames > 0 && inputChannels > 0)
@@ -163,7 +165,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 #else
         midiMode->load() >= 0.5f;
 #endif
-    const bool useLiveEffect = !useMidi && inputMode == 3 && inputChannels > 0;
+    const bool useLiveEffect = inputMode == 3 && inputChannels > 0;
     // When using the synth on an effect track, the incoming DAW audio must not
     // leak into the oscillator/sample output unless Monitor was chosen.
     if (useMidi && inputMode == 3)
@@ -314,19 +316,43 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         if (right != nullptr)
             blockPeak = std::max(blockPeak, std::abs(right[i]));
     }
+    if (captureProcessed.load() && captureState.load(std::memory_order_acquire) == 1)
+    {
+        const int frames = juce::jmin(capacity - captureWritePosition, buffer.getNumSamples());
+        if (frames > 0)
+        {
+            for (int ch = 0; ch < 2; ++ch)
+                std::copy_n(buffer.getReadPointer(juce::jmin(ch, buffer.getNumChannels() - 1)), frames,
+                            capturedAudio.getWritePointer(ch) + captureWritePosition);
+            captureWritePosition += frames;
+            capturedFrameCount.store(captureWritePosition, std::memory_order_release);
+        }
+        if (captureWritePosition >= capacity)
+        {
+            captureState.store(0, std::memory_order_release);
+            captureReady.store(true, std::memory_order_release);
+        }
+    }
+    outputHistory[static_cast<std::size_t>(historyIndex)].store(blockPeak);
+    historyCursor.store((historyIndex + 1) % 128);
     midi.clear(); // Input consumed; this instrument does not emit MIDI.
     peak.store(blockPeak, std::memory_order_relaxed);
     grainsActive.store(static_cast<int>((useLiveEffect || (useMidi && !engine.hasActiveSample())) ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
 }
-void DrizelAudioProcessor::beginDawCapture()
+void DrizelAudioProcessor::beginDawCapture(bool processed)
 {
     // Called on the message thread; recording starts at the next audio block.
-    captureState.store(0, std::memory_order_release);
+    if (captureActive()) return;
+    captureProcessed.store(processed);
     // The audio thread owns the write cursor and resets it at the next block boundary.
     captureReady.store(false, std::memory_order_release);
     captureState.store(2, std::memory_order_release); // 2 = arm/reset on audio thread
 }
 bool DrizelAudioProcessor::finishDawCapture(const juce::File& file)
+{
+    return exportCapture(file, true);
+}
+bool DrizelAudioProcessor::exportCapture(const juce::File& file, bool loadAsSample)
 {
     // Stop and export must not race with processBlock. The UI requests a stop,
     // and the audio callback acknowledges it at the next block boundary.
@@ -342,7 +368,7 @@ bool DrizelAudioProcessor::finishDawCapture(const juce::File& file)
         drizel::writeWav(std::filesystem::u8path(file.getFullPathName().toStdString()), source);
     }
     catch (const std::exception&) { return false; }
-    requestSample(file);
+    if (loadAsSample) requestSample(file);
     return true;
 }
 void DrizelAudioProcessor::requestSample(const juce::File& file)
