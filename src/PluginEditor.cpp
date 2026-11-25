@@ -392,8 +392,10 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     addAndMakeVisible(keyboardToggle);
     keyboardToggle.setColour(juce::TextButton::textColourOffId, juce::Colour(forest));
     keyboardToggle.onClick = [this] { setKeyboardExpanded(!keyboardExpanded); };
+    // Keep the collapsed choice across editor reopenings in this plugin instance.
+    keyboardExpanded = processor.keyboardVisible();
 
-    setKeyboardExpanded(false);
+    setKeyboardExpanded(keyboardExpanded);
     startTimerHz(30);
     timerCallback();
 }
@@ -644,6 +646,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 void DrizelAudioProcessorEditor::setKeyboardExpanded(bool expanded)
 {
     keyboardExpanded = expanded;
+    processor.setKeyboardVisible(expanded);
     keyboardToggle.setButtonText(expanded ? "Hide MIDI keyboard" : "Show MIDI keyboard");
     for (juce::Component* component : std::array<juce::Component*, 5>{
              &keyboard, &keyboardRange, &octaveDown, &octaveUp, &midiHelp})
