@@ -222,6 +222,16 @@ if(DRIZEL_BUILD_PLUGIN)
     endif()
     target_compile_definitions(DrizelInstrument PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
+    if(BUILD_TESTING)
+        add_executable(drizel_instrument_processor_tests tests/InstrumentProcessorTests.cpp)
+        target_link_libraries(drizel_instrument_processor_tests PRIVATE DrizelInstrument)
+        target_include_directories(drizel_instrument_processor_tests PRIVATE
+            $<TARGET_PROPERTY:DrizelInstrument,INCLUDE_DIRECTORIES>)
+        target_compile_definitions(drizel_instrument_processor_tests PRIVATE
+            $<TARGET_PROPERTY:DrizelInstrument,COMPILE_DEFINITIONS>)
+        target_compile_features(drizel_instrument_processor_tests PRIVATE cxx_std_17)
+        add_test(NAME instrument_processor COMMAND drizel_instrument_processor_tests)
+    endif()
 endif()
 
 if(BUILD_TESTING)
