@@ -161,67 +161,6 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         button->setLookAndFeel(editorLook.get());
         button->setColour(juce::TextButton::textColourOffId,juce::Colour(mint));
     }
-    for (auto* button : {&captureButton, &useCaptureButton})
-    {
-        addAndMakeVisible(*button);
-        button->setLookAndFeel(editorLook.get());
-        button->setColour(juce::TextButton::textColourOffId, juce::Colour(mint));
-    }
-    useCaptureButton.setEnabled(false);
-    captureButton.onClick = [this]
-    {
-        if (!captureRecording)
-        {
-            renderedOutput = juce::File{};
-            processor.beginDawCapture();
-            captureRecording = true;
-            captureButton.setButtonText("Stop capture");
-            useCaptureButton.setEnabled(false);
-        }
-        else
-        {
-            processor.stopDawCapture();
-            captureRecording = false;
-            captureButton.setButtonText("Capture");
-        }
-    };
-    useCaptureButton.onClick = [this]
-    {
-        if (!processor.dawCaptureReady()) return;
-        auto destination = juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getNonexistentChildFile("drizel-daw-capture", ".wav", false);
-        if (processor.finishDawCapture(destination))
-        {
-            selectSampleMode();
-            useCaptureButton.setEnabled(false);
-        }
-        else
-            status.setText("DAW capture export failed", juce::dontSendNotification);
-    };
-    for (auto* button : {&renderButton, &dragOutputButton})
-    {
-        addAndMakeVisible(*button);
-        button->setLookAndFeel(editorLook.get());
-        button->setColour(juce::TextButton::textColourOffId, juce::Colour(mint));
-    }
-    renderButton.onClick = [this]
-    {
-        if (recordingOutput) processor.stopDawCapture();
-        else if (!processor.captureActive())
-        {
-            renderedOutput = juce::File{};
-            processor.beginDawCapture(true);
-            recordingOutput = true;
-            renderButton.setButtonText("Stop output");
-        }
-    };
-    dragOutputButton.onClick = [this]
-    {
-        if (renderedOutput.existsAsFile())
-            juce::DragAndDropContainer::performExternalDragDropOfFiles(
-                juce::StringArray{renderedOutput.getFullPathName()}, false, &dragOutputButton);
-    };
-    dragOutputButton.setEnabled(false);
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
 
@@ -287,6 +226,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
     configureChoice(audioInputChoice,{"Sample","Audio monitor","Audio capture","Live FX"});
+    // Keep parameter choice IDs stable for existing DAW sessions.
+    audioInputChoice.setItemEnabled(3, false);
     configureChoice(shapeChoice,{"Sine","Triangle"});
     configureChoice(destinationChoice,{"Off","Position","Pitch"});
     configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
@@ -457,7 +398,7 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
     endWaveformGesture();
     for (auto& slider : sliders) slider.setLookAndFeel(nullptr);
     for (auto& slider : movementSettings) slider.setLookAndFeel(nullptr);
-    for (auto* button : {&loadButton, &saveButton, &presetButton, &captureButton, &useCaptureButton, &renderButton, &dragOutputButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
+    for (auto* button : {&loadButton, &saveButton, &presetButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
 #endif
@@ -553,28 +494,8 @@ void DrizelAudioProcessorEditor::selectSampleMode()
 }
 void DrizelAudioProcessorEditor::timerCallback()
 {
-    if (recordingOutput && !processor.captureActive())
-    {
-        recordingOutput = false;
-        renderButton.setButtonText("Record output");
-        auto file = juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getNonexistentChildFile("Drizel-Output", ".wav", false);
-        if (processor.exportCapture(file, false)) renderedOutput = file;
-    }
-    if (captureRecording && !processor.captureActive())
-    {
-        captureRecording = false;
-        captureButton.setButtonText("Capture");
-    }
-    useCaptureButton.setEnabled(!recordingOutput && !processor.captureActive() && processor.dawCaptureReady()
-                                && processor.capturedFrames() > 0 && !renderedOutput.existsAsFile());
-    captureButton.setEnabled(!recordingOutput && (captureRecording || !processor.captureActive()));
-    renderButton.setEnabled(!captureRecording && (recordingOutput || !processor.captureActive()));
-    dragOutputButton.setEnabled(renderedOutput.existsAsFile());
     const bool live = !JucePlugin_IsSynth && audioInputChoice.getSelectedId() == 4;
-    status.setText((recordingOutput ? juce::String("Recording processed output") :
-                    captureRecording ? juce::String("Recording input") :
-                    live ? juce::String("Live DAW audio") :
+    status.setText((live ? juce::String("Live DAW audio") :
                     JucePlugin_IsSynth && processor.loadedSampleState().path.isEmpty() ? juce::String("MIDI oscillator ready") :
                     processor.loadStatus()) + presetStatus, juce::dontSendNotification);
     if (applyButton.isEnabled() && previewRevision != processor.sampleRequestRevision())
@@ -779,13 +700,7 @@ void DrizelAudioProcessorEditor::resized()
     saveButton.setBounds(w - 230, 24, 104, 32);
     playButton.setBounds(w - 113, 24, 82, 32);
     status.setBounds(35, 74, w - 390, 20);
-    captureButton.setBounds(35, 250, 110, 25);
-    useCaptureButton.setBounds(151, 250, 125, 25);
-    renderButton.setBounds(282, 250, 150, 25);
-    dragOutputButton.setBounds(438, 250, 115, 25);
 #if JucePlugin_IsSynth
-    captureButton.setVisible(false);
-    useCaptureButton.setVisible(false);
     audioInputChoice.setVisible(false);
     modeChoice.setEnabled(false);
 #endif
