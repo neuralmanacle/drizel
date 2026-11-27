@@ -1,4 +1,4 @@
-![Drizel logo](docs/assets/drizel-logo.jpg)
+<img src="assets/drizel_logo_hollow.png" width="100" alt="Drizel logo">
 
 # Drizel
 
