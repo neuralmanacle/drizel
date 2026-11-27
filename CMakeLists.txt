@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 
 # JUCE's module helpers require both C and C++ compilers to be enabled even
 # though the Drizel-owned implementation files in this target are C++.
-project(DrizelOffline VERSION 0.1.0 LANGUAGES C CXX)
+project(DrizelOffline VERSION 1.0.0 LANGUAGES C CXX)
 
 # CACHE PATH exposes a user setting: -DDRIZEL_JUCE_PATH=/your/JUCE/checkout.
 # The sibling directory is a default, not a dependency downloaded by CMake.
