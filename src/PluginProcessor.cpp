@@ -80,7 +80,11 @@ void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
     playingPanelKeys.fill(0);
     heldHostKeys.fill(false);
     hostKey.store(-1);
-    previousMidiMode = inputMode != 3 && midiMode->load() >= 0.5f;
+#if JucePlugin_IsSynth
+    previousMidiMode = true;
+#else
+    previousMidiMode = midiMode->load() >= 0.5f;
+#endif
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
     requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
