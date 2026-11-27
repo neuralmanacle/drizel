@@ -14,7 +14,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"lfoDepth", 1}, "LFO depth", 0.0f, 1.0f, 0.0f));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoShape", 1}, "LFO shape", juce::StringArray{"Sine", "Triangle"}, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"lfoDestination", 1}, "LFO destination", juce::StringArray{"Off", "Position", "Pitch"}, 0));
-    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"midiMode", 1}, "Mode", juce::StringArray{"Drone", "MIDI"}, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"midiMode", 1}, "Mode", juce::StringArray{"Drone", "MIDI"}, JucePlugin_IsSynth ? 1 : 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"audioInputMode", 1}, "DAW audio", juce::StringArray{"Off", "Monitor", "Capture", "Live FX"}, 3));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"attack", 1}, "Attack (seconds)", 0.001f, 2.0f, 0.01f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"release", 1}, "Release (seconds)", 0.005f, 5.0f, 0.2f));
@@ -25,8 +25,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout DrizelAudioProcessor::makePa
 }
 
 DrizelAudioProcessor::DrizelAudioProcessor()
-    : AudioProcessor(BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true)
-                                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties()
+#if JucePlugin_IsSynth
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#else
+                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+                     ),
       Thread("Drizel sample loader"), parameters(*this, nullptr, "DrizelState", makeParameters())
 {
     static_assert(std::atomic<float>::is_always_lock_free, "Parameters must be lock-free");
@@ -74,7 +80,7 @@ void DrizelAudioProcessor::prepareToPlay(double sampleRate, int)
     playingPanelKeys.fill(0);
     heldHostKeys.fill(false);
     hostKey.store(-1);
-    previousMidiMode = midiMode->load() >= 0.5f;
+    previousMidiMode = inputMode != 3 && midiMode->load() >= 0.5f;
     lfo.prepare(sampleRate); // The host guarantees processing is stopped here.
     const juce::ScopedLock lock(requestLock);
     requestedRate = sampleRate; // Rebuild the source/windows for a new device rate.
@@ -85,8 +91,13 @@ bool DrizelAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 {
     const auto input = layouts.getMainInputChannelSet();
     const auto output = layouts.getMainOutputChannelSet();
+#if JucePlugin_IsSynth
+    return input.isDisabled()
+        && (output == juce::AudioChannelSet::mono() || output == juce::AudioChannelSet::stereo());
+#else
     return (input == juce::AudioChannelSet::mono() || input == juce::AudioChannelSet::stereo())
         && (output == juce::AudioChannelSet::mono() || output == juce::AudioChannelSet::stereo());
+#endif
 }
 void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
@@ -94,7 +105,12 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     // Preserve incoming DAW samples before the synthesiser writes its output.
     const int inputChannels = getTotalNumInputChannels();
     const int outputChannels = getTotalNumOutputChannels();
-    const int inputMode = static_cast<int>(audioInputMode->load(std::memory_order_relaxed));
+    const int inputMode =
+#if JucePlugin_IsSynth
+        0; // A synth has no audio-input bus to monitor or capture.
+#else
+        static_cast<int>(audioInputMode->load(std::memory_order_relaxed));
+#endif
     const int capacity = capturedAudio.getNumSamples();
     if (captureState.load(std::memory_order_acquire) == 2)
     {
@@ -107,7 +123,9 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         captureState.store(0, std::memory_order_release);
         captureReady.store(true, std::memory_order_release);
     }
-    if (inputMode == 2 && captureState.load(std::memory_order_acquire) == 1)
+    const int historyIndex = historyCursor.load(std::memory_order_relaxed);
+    inputHistory[static_cast<std::size_t>(historyIndex)].store(inputChannels > 0 ? buffer.getMagnitude(0, 0, buffer.getNumSamples()) : 0.0f);
+    if (!captureProcessed.load() && captureState.load(std::memory_order_acquire) == 1)
     {
         const int frames = juce::jmin(capacity - captureWritePosition, buffer.getNumSamples());
         if (frames > 0 && inputChannels > 0)
@@ -141,8 +159,13 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         return;
     }
     keyboardState.processNextMidiBuffer(midi, 0, buffer.getNumSamples(), true);
-    const bool useMidi = midiMode->load() >= 0.5f;
-    const bool useLiveEffect = !useMidi && inputMode == 3;
+    const bool useMidi =
+#if JucePlugin_IsSynth
+        true; // Dedicated instrument always responds to DAW MIDI events.
+#else
+        midiMode->load() >= 0.5f;
+#endif
+    const bool useLiveEffect = inputMode == 3 && inputChannels > 0;
     // When using the synth on an effect track, the incoming DAW audio must not
     // leak into the oscillator/sample output unless Monitor was chosen.
     if (useMidi && inputMode == 3)
@@ -197,7 +220,7 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             // Inspect borrowed bytes, avoiding MidiMessage copies (SysEx can allocate).
             const auto message = *event++;
             const auto* data = message.data;
-            if (useMidi && message.numBytes >= 3 && (data[0] & 0x0f) == 0)
+            if (useMidi && message.numBytes >= 3)
             {
                 switch (data[0] & 0xf0)
                 {
@@ -273,7 +296,11 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             oscillatorPhase -= std::floor(oscillatorPhase);
             constexpr double pi = 3.14159265358979323846;
             const float tone = 0.25f * static_cast<float>(std::sin(2.0 * pi * oscillatorPhase));
-            frame = {tone * level, tone * level};
+            const auto wet = liveGranulator.process(tone * amplitude, tone * amplitude,
+                targets.position, targets.pitch - semitones, instrument.density(grains), level);
+            // Immediate note attack plus granular texture as the history fills.
+            frame = {0.35f * tone * level + 0.65f * wet.left,
+                     0.35f * tone * level + 0.65f * wet.right};
         }
         if (useLiveEffect)
         {
@@ -289,19 +316,43 @@ void DrizelAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         if (right != nullptr)
             blockPeak = std::max(blockPeak, std::abs(right[i]));
     }
+    if (captureProcessed.load() && captureState.load(std::memory_order_acquire) == 1)
+    {
+        const int frames = juce::jmin(capacity - captureWritePosition, buffer.getNumSamples());
+        if (frames > 0)
+        {
+            for (int ch = 0; ch < 2; ++ch)
+                std::copy_n(buffer.getReadPointer(juce::jmin(ch, buffer.getNumChannels() - 1)), frames,
+                            capturedAudio.getWritePointer(ch) + captureWritePosition);
+            captureWritePosition += frames;
+            capturedFrameCount.store(captureWritePosition, std::memory_order_release);
+        }
+        if (captureWritePosition >= capacity)
+        {
+            captureState.store(0, std::memory_order_release);
+            captureReady.store(true, std::memory_order_release);
+        }
+    }
+    outputHistory[static_cast<std::size_t>(historyIndex)].store(blockPeak);
+    historyCursor.store((historyIndex + 1) % 128);
     midi.clear(); // Input consumed; this instrument does not emit MIDI.
     peak.store(blockPeak, std::memory_order_relaxed);
-    grainsActive.store(static_cast<int>(useLiveEffect ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
+    grainsActive.store(static_cast<int>((useLiveEffect || (useMidi && !engine.hasActiveSample())) ? liveGranulator.activeGrains() : engine.activeGrains()), std::memory_order_relaxed);
 }
-void DrizelAudioProcessor::beginDawCapture()
+void DrizelAudioProcessor::beginDawCapture(bool processed)
 {
     // Called on the message thread; recording starts at the next audio block.
-    captureState.store(0, std::memory_order_release);
+    if (captureActive()) return;
+    captureProcessed.store(processed);
     // The audio thread owns the write cursor and resets it at the next block boundary.
     captureReady.store(false, std::memory_order_release);
     captureState.store(2, std::memory_order_release); // 2 = arm/reset on audio thread
 }
 bool DrizelAudioProcessor::finishDawCapture(const juce::File& file)
+{
+    return exportCapture(file, true);
+}
+bool DrizelAudioProcessor::exportCapture(const juce::File& file, bool loadAsSample)
 {
     // Stop and export must not race with processBlock. The UI requests a stop,
     // and the audio callback acknowledges it at the next block boundary.
@@ -317,7 +368,7 @@ bool DrizelAudioProcessor::finishDawCapture(const juce::File& file)
         drizel::writeWav(std::filesystem::u8path(file.getFullPathName().toStdString()), source);
     }
     catch (const std::exception&) { return false; }
-    requestSample(file);
+    if (loadAsSample) requestSample(file);
     return true;
 }
 void DrizelAudioProcessor::requestSample(const juce::File& file)
@@ -410,6 +461,7 @@ void DrizelAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
         state.setProperty("samplePath", requestedPath, nullptr);
     }
     state.setProperty("movementPolicyV1", juce::String(static_cast<juce::int64>(movementWord.load())), nullptr);
+    state.setProperty("keyboardExpanded", keyboardExpanded.load(), nullptr);
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destination);
 }
@@ -434,6 +486,7 @@ void DrizelAudioProcessor::setStateInformation(const void* data, int bytes)
             const auto restored = drizel::MovementPolicy::unpack(packed);
             const auto canonical = juce::String(static_cast<juce::int64>(restored.packed()));
             parameters.replaceState(state); // JUCE updates the atomic parameter values.
+            keyboardExpanded.store(static_cast<bool>(state.getProperty("keyboardExpanded", false)));
             const auto path = state.getProperty("samplePath").toString();
             const juce::ScopedLock lock(requestLock);
             setMovement(restored.valid() && savedMovement == canonical

@@ -180,9 +180,11 @@ if(DRIZEL_BUILD_PLUGIN)
         COMPANY_NAME "Neural Manacle"
         BUNDLE_ID "com.neuralmanacle.drizel"
         PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE Drzl
-        FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "drizel"
-        IS_SYNTH FALSE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "Drizel"
+        IS_SYNTH FALSE NEEDS_MIDI_INPUT FALSE NEEDS_MIDI_OUTPUT FALSE
+        VST3_CATEGORIES Fx AU_MAIN_TYPE kAudioUnitType_Effect
         COPY_PLUGIN_AFTER_BUILD FALSE)
+    # Audio FX: the original product remains available on audio tracks.
     juce_generate_juce_header(DrizelPlugin)
     target_sources(DrizelPlugin PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
     juce_add_binary_data(DrizelLogoData SOURCES assets/drizel_logo.png)
@@ -198,6 +200,40 @@ if(DRIZEL_BUILD_PLUGIN)
     endif()
     target_compile_definitions(DrizelPlugin PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
+
+    # A distinct synth identity allows DAWs such as Live to list Drizel on MIDI
+    # tracks without sacrificing the effect's stereo audio input buses.
+    juce_add_plugin(DrizelInstrument
+        ${DRIZEL_SPEECH_OPTIONS}
+        COMPANY_NAME "Neural Manacle"
+        BUNDLE_ID "com.neuralmanacle.drizel.instrument"
+        PLUGIN_MANUFACTURER_CODE NeuM PLUGIN_CODE DrzI
+        FORMATS ${DRIZEL_FORMATS} PRODUCT_NAME "Drizel Instrument"
+        IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE
+        VST3_CATEGORIES Instrument Synth AU_MAIN_TYPE kAudioUnitType_MusicDevice
+        COPY_PLUGIN_AFTER_BUILD FALSE)
+    juce_generate_juce_header(DrizelInstrument)
+    target_sources(DrizelInstrument PRIVATE src/PluginProcessor.cpp src/PluginEditor.cpp src/io/WavFile.cpp)
+    target_link_libraries(DrizelInstrument PRIVATE drizel_core juce::juce_audio_utils DrizelLogoData)
+    target_compile_definitions(DrizelInstrument PRIVATE DRIZEL_HAS_DRIZEL_LOGO=1)
+    if(APPLE)
+        target_sources(DrizelInstrument PRIVATE src/MovementSpeech.mm)
+        set_source_files_properties(src/MovementSpeech.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+        target_compile_definitions(DrizelInstrument PUBLIC DRIZEL_MAC_SPEECH=1)
+        target_link_libraries(DrizelInstrument PRIVATE "-framework Speech" "-framework AVFoundation")
+    endif()
+    target_compile_definitions(DrizelInstrument PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0)
+    if(BUILD_TESTING)
+        add_executable(drizel_instrument_processor_tests tests/InstrumentProcessorTests.cpp)
+        target_link_libraries(drizel_instrument_processor_tests PRIVATE DrizelInstrument)
+        target_include_directories(drizel_instrument_processor_tests PRIVATE
+            $<TARGET_PROPERTY:DrizelInstrument,INCLUDE_DIRECTORIES>)
+        target_compile_definitions(drizel_instrument_processor_tests PRIVATE
+            $<TARGET_PROPERTY:DrizelInstrument,COMPILE_DEFINITIONS>)
+        target_compile_features(drizel_instrument_processor_tests PRIVATE cxx_std_17)
+        add_test(NAME instrument_processor COMMAND drizel_instrument_processor_tests)
+    endif()
 endif()
 
 if(BUILD_TESTING)

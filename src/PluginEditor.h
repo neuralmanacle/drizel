@@ -35,6 +35,10 @@ private:
     DrizelAudioProcessor& processor;
     juce::ParameterAttachment waveformPositionAttachment;
     bool waveformGestureActive = false;
+    const juce::String uiFont {"Menlo"};
+    std::unique_ptr<juce::LookAndFeel_V4> editorLook;
+    void applyFont();
+    juce::Font uiTypeface(float height, int style = juce::Font::plain) const;
     juce::TextEditor movementCommand;
     juce::TextButton previewButton {"Preview"}, applyButton {"Apply"}, manualButton {"Manual scan"};
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
@@ -48,8 +52,7 @@ private:
     drizel::MovementPolicy proposedMovement;
     std::uint64_t previewRevision = 0;
     juce::TextButton loadButton {"Load WAV"};
-    juce::TextButton captureButton {"Record DAW"}, useCaptureButton {"Use DAW take"};
-    bool captureRecording = false;
+    void selectSampleMode();
     class TransportButton : public juce::TextButton
     {
     public:
@@ -78,6 +81,12 @@ private:
     juce::MidiKeyboardState keyboardState;
     juce::MidiKeyboardComponent keyboard {keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
     juce::TextButton octaveDown {"−"}, octaveUp {"+"};
+    juce::TextButton keyboardToggle {"Show MIDI keyboard"};
+    bool keyboardExpanded = false;
+    static constexpr int compactEditorWidth = 1100;
+    static constexpr int collapsedEditorHeight = 885;
+    static constexpr int expandedEditorHeight = 1000;
+    void setKeyboardExpanded(bool expanded);
     int keyboardOctave = 3, highlightedNote = -1;
     std::array<bool, 13> computerNotesDown {};
     juce::Rectangle<int> deckBounds, headerBounds, keyboardHeaderBounds;

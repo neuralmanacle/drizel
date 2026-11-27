@@ -55,7 +55,10 @@ int main()
         check(audio.getMagnitude(0, 64) == 0, "MIDI mode is silent without notes");
         midi.addEvent(juce::MidiMessage::noteOn(2, 60, 1.0f), 0);
         p.processBlock(audio, midi);
-        check(audio.getMagnitude(0, 64) == 0, "other MIDI channels ignored");
+        check(audio.getMagnitude(0, 64) > 0, "channel 2 must produce sound");
+        midi.addEvent(juce::MidiMessage::noteOff(2, 60), 0);
+        p.processBlock(audio, midi);
+        check(audio.getMagnitude(8, 56) == 0, "channel 2 note-off must release sound");
         midi.addEvent(juce::MidiMessage::noteOn(1, 60, 1.0f), 17);
         midi.addEvent(juce::MidiMessage::noteOff(1, 60), 41);
         p.processBlock(audio, midi);
