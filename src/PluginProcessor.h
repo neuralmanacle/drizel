@@ -49,7 +49,10 @@ public:
     bool savePreset(const juce::File&); // Message thread file I/O.
     bool loadPreset(const juce::File&);
     void requestSample(const juce::File&); // Control thread only; queues a path.
-    void beginDawCapture();
+    void beginDawCapture(bool processed = false);
+    bool captureActive() const noexcept { return captureState.load() != 0; }
+    bool exportCapture(const juce::File&, bool loadAsSample);
+    float waveformPeak(bool output, int index) const noexcept { return (output ? outputHistory : inputHistory)[static_cast<std::size_t>((historyCursor.load() + index) % 128)].load(); }
     void stopDawCapture() noexcept { captureState.store(3, std::memory_order_release); }
     bool finishDawCapture(const juce::File&); // Export finished DAW capture as WAV.
     bool dawCaptureReady() const noexcept { return captureReady.load(std::memory_order_acquire); }
@@ -59,6 +62,8 @@ public:
     float outputPeak() const noexcept { return peak.load(std::memory_order_relaxed); }
     int activeGrainCount() const noexcept { return grainsActive.load(std::memory_order_relaxed); }
     juce::String loadStatus(); // UI thread only; never queried by processBlock.
+    void setKeyboardVisible(bool visible) noexcept { keyboardExpanded.store(visible); }
+    bool keyboardVisible() const noexcept { return keyboardExpanded.load(); }
     juce::MidiKeyboardState keyboardState; // On-screen MIDI keyboard shares the audio event stream.
     juce::AudioProcessorValueTreeState parameters; // Automatable controls/state.
 
@@ -70,11 +75,15 @@ private:
     std::array<int, 128> playingPanelKeys {};
     std::array<bool, 128> heldHostKeys {};
     std::atomic<int> hostKey {-1};
+    std::atomic<bool> keyboardExpanded {false};
     bool previousMidiMode = false;
     std::atomic<bool> resetInstrument {false};
     std::atomic<float>* midiMode = nullptr;
     std::atomic<float>* audioInputMode = nullptr;
     juce::AudioBuffer<float> capturedAudio;
+    std::atomic<bool> captureProcessed {false};
+    std::array<std::atomic<float>, 128> inputHistory {}, outputHistory {};
+    std::atomic<int> historyCursor {0};
     double captureSampleRate = 48000.0;
     int captureWritePosition = 0;
     std::atomic<int> captureState {0}; // 0 idle, 1 capturing, 2 arm, 3 stop.

@@ -14,6 +14,17 @@ constexpr juce::uint32 pearl = 0xfffff0d8;
 class DrizelGlassLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
+    juce::String family;
+    juce::Typeface::Ptr getTypefaceForFont(const juce::Font& font) override
+    {
+        if (family.isNotEmpty())
+        {
+            auto selectedFont = font;
+            selectedFont.setTypefaceName(family);
+            return juce::Typeface::createSystemTypefaceFor(selectedFont);
+        }
+        return juce::LookAndFeel_V4::getTypefaceForFont(font);
+    }
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
                               const juce::Colour&, bool hovered, bool down) override
     {
@@ -133,54 +144,23 @@ public:
 
     }
 };
-DrizelGlassLookAndFeel& glassLook() { static DrizelGlassLookAndFeel look; return look; }
+
 }
 
 DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     : AudioProcessorEditor(p), processor(p),
       waveformPositionAttachment(*p.parameters.getParameter("position"), nullptr)
 {
+    editorLook = std::make_unique<DrizelGlassLookAndFeel>();
+    setLookAndFeel(editorLook.get());
     setOpaque(false);
     formats.registerBasicFormats();
     for (auto* button : { &loadButton, &saveButton, &presetButton })
     {
         addAndMakeVisible(*button);
-        button->setLookAndFeel(&glassLook());
+        button->setLookAndFeel(editorLook.get());
         button->setColour(juce::TextButton::textColourOffId,juce::Colour(mint));
     }
-    for (auto* button : {&captureButton, &useCaptureButton})
-    {
-        addAndMakeVisible(*button);
-        button->setLookAndFeel(&glassLook());
-        button->setColour(juce::TextButton::textColourOffId, juce::Colour(mint));
-    }
-    useCaptureButton.setEnabled(false);
-    captureButton.onClick = [this]
-    {
-        if (!captureRecording)
-        {
-            processor.beginDawCapture();
-            captureRecording = true;
-            captureButton.setButtonText("Stop DAW");
-            useCaptureButton.setEnabled(false);
-        }
-        else
-        {
-            processor.stopDawCapture();
-            captureRecording = false;
-            captureButton.setButtonText("Record DAW");
-        }
-    };
-    useCaptureButton.onClick = [this]
-    {
-        if (!processor.dawCaptureReady()) return;
-        auto destination = juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getNonexistentChildFile("drizel-daw-capture", ".wav", false);
-        if (processor.finishDawCapture(destination))
-            useCaptureButton.setEnabled(false);
-        else
-            status.setText("DAW capture export failed", juce::dontSendNotification);
-    };
     addAndMakeVisible(playButton);
     playButton.setClickingTogglesState(true);
 
@@ -227,7 +207,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         s.setColour(juce::Slider::textBoxTextColourId, juce::Colour(mint));
         s.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(ink));
         s.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-        s.setLookAndFeel(&glassLook());
+        s.setLookAndFeel(editorLook.get());
         addAndMakeVisible(s);
         attachments[i]=std::make_unique<SliderAttachment>(processor.parameters,ids[i],s);
     }
@@ -241,11 +221,13 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         box.setColour(juce::ComboBox::outlineColourId,juce::Colour(0xff729e89));
         box.setColour(juce::ComboBox::arrowColourId,juce::Colour(0xffd73832));
         box.setJustificationType(juce::Justification::centred);
-        box.setLookAndFeel(&glassLook());
+        box.setLookAndFeel(editorLook.get());
         addAndMakeVisible(box);
     };
     configureChoice(modeChoice,{"Drone","MIDI"});
-    configureChoice(audioInputChoice,{"Audio off","Audio monitor","Audio capture","Live FX"});
+    configureChoice(audioInputChoice,{"Sample","Audio monitor","Audio capture","Live FX"});
+    // Keep parameter choice IDs stable for existing DAW sessions.
+    audioInputChoice.setItemEnabled(3, false);
     configureChoice(shapeChoice,{"Sine","Triangle"});
     configureChoice(destinationChoice,{"Off","Position","Pitch"});
     configureChoice(selectionChoice,{"Manual","Attack","Sustain","Avoid silence","Bright"});
@@ -265,7 +247,10 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
             [safe](const juce::FileChooser& dialog)
             {
                 if(safe != nullptr && dialog.getResult().existsAsFile())
+                {
+                    safe->selectSampleMode();
                     safe->processor.requestSample(dialog.getResult());
+                }
             });
     };
     // Keyboard note shortcuts are observed even while a knob or button has focus.
@@ -277,6 +262,8 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
                      juce::dontSendNotification);
 
     movementCommand.setMultiLine(true);
+    movementCommand.setFont(uiTypeface(22.0f));
+    movementCommand.setIndents(10, 8);
     movementCommand.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff153e2b));
     movementCommand.setColour(juce::TextEditor::textColourId, juce::Colour(pearl));
     movementCommand.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff78977b));
@@ -304,7 +291,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     applyButton.setEnabled(false);
     for (auto* button : {&previewButton, &applyButton, &manualButton})
     {
-        button->setLookAndFeel(&glassLook());
+        button->setLookAndFeel(editorLook.get());
         button->setColour(juce::TextButton::textColourOffId, juce::Colour(pearl));
     }
     const char* settings[] = {"Region start %", "Region end %", "Interval / ms",
@@ -320,7 +307,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
         slider.setRange(minimum[i], maximum[i], i == 2 ? 50 : 1);
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 20);
-        slider.setLookAndFeel(&glassLook());
+        slider.setLookAndFeel(editorLook.get());
         slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(mint));
         slider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(ink));
         slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -337,7 +324,7 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {
         addAndMakeVisible(speechButton);
-        speechButton.setLookAndFeel(&glassLook());
+        speechButton.setLookAndFeel(editorLook.get());
         speechButton.setColour(juce::TextButton::textColourOffId, juce::Colour(pearl));
         speechButton.onStateChange = [this] {
             const bool down = speechButton.isDown();
@@ -389,8 +376,15 @@ DrizelAudioProcessorEditor::DrizelAudioProcessorEditor(DrizelAudioProcessor& p)
              &keyboard, &keyboardRange, &octaveDown, &octaveUp, &movementTitle})
         addAndMakeVisible(component);
     setKeyboardOctave(3);
+    addAndMakeVisible(keyboardToggle);
+    keyboardToggle.setLookAndFeel(editorLook.get());
+    keyboardToggle.setColour(juce::TextButton::textColourOffId, juce::Colour(pearl));
+    keyboardToggle.onClick = [this] { setKeyboardExpanded(!keyboardExpanded); };
+    // Keep the collapsed choice across editor reopenings in this plugin instance.
+    keyboardExpanded = processor.keyboardVisible();
 
-    setSize(1100, 1000);
+    applyFont();
+    setKeyboardExpanded(keyboardExpanded);
     startTimerHz(30);
     timerCallback();
 }
@@ -404,11 +398,13 @@ DrizelAudioProcessorEditor::~DrizelAudioProcessorEditor()
     endWaveformGesture();
     for (auto& slider : sliders) slider.setLookAndFeel(nullptr);
     for (auto& slider : movementSettings) slider.setLookAndFeel(nullptr);
-    for (auto* button : {&loadButton, &saveButton, &presetButton, &captureButton, &useCaptureButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
+    for (auto* button : {&loadButton, &saveButton, &presetButton, &previewButton, &applyButton, &manualButton}) button->setLookAndFeel(nullptr);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     speechButton.setLookAndFeel(nullptr);
 #endif
     for (auto* box : {&modeChoice, &audioInputChoice, &shapeChoice, &destinationChoice, &selectionChoice}) box->setLookAndFeel(nullptr);
+    keyboardToggle.setLookAndFeel(nullptr);
+    setLookAndFeel(nullptr);
     for (int i = 0; i < 13; ++i) if (computerNotesDown[static_cast<std::size_t>(i)]) processor.keyboardState.noteOff(1, 60+i, 0.0f);
 }
 
@@ -484,13 +480,24 @@ bool DrizelAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray&
 void DrizelAudioProcessorEditor::filesDropped(const juce::StringArray& files, int, int)
 {
     if (isInterestedInFileDrag(files) && juce::File(files[0]).existsAsFile())
+    {
+        selectSampleMode();
         processor.requestSample(juce::File(files[0]));
+    }
+}
+void DrizelAudioProcessorEditor::selectSampleMode()
+{
+#if !JucePlugin_IsSynth
+    audioInputChoice.setSelectedId(1, juce::sendNotificationSync);
+    modeChoice.setSelectedId(1, juce::sendNotificationSync);
+#endif
 }
 void DrizelAudioProcessorEditor::timerCallback()
 {
-    if (!captureRecording && processor.dawCaptureReady())
-        useCaptureButton.setEnabled(true);
-    status.setText(processor.loadStatus() + presetStatus, juce::dontSendNotification);
+    const bool live = !JucePlugin_IsSynth && audioInputChoice.getSelectedId() == 4;
+    status.setText((live ? juce::String("Live DAW audio") :
+                    JucePlugin_IsSynth && processor.loadedSampleState().path.isEmpty() ? juce::String("MIDI oscillator ready") :
+                    processor.loadStatus()) + presetStatus, juce::dontSendNotification);
     if (applyButton.isEnabled() && previewRevision != processor.sampleRequestRevision())
     {
         applyButton.setEnabled(false);
@@ -540,6 +547,24 @@ static std::array<juce::Rectangle<int>,4> controlPanels(juce::Rectangle<int> dec
              {x + third + gap, y, third, height},
              {x + 2 * (third + gap), y, deck.getWidth() - 2 * (third + gap), height}}};
 }
+juce::Font DrizelAudioProcessorEditor::uiTypeface(float height, int style) const
+{
+    auto font = juce::Font(juce::FontOptions(height, style));
+    if (uiFont.isNotEmpty()) font.setTypefaceName(uiFont);
+    return font;
+}
+void DrizelAudioProcessorEditor::applyFont()
+{
+    static_cast<DrizelGlassLookAndFeel*>(editorLook.get())->family = uiFont;
+    movementCommand.applyFontToAllText(uiTypeface(22.0f));
+    movementCommand.setFont(uiTypeface(22.0f));
+    for (auto& label : labels) label.setFont(uiTypeface(14.0f));
+    for (auto& label : movementLabels) label.setFont(uiTypeface(14.0f));
+    for (auto* label : {&status, &selectionLabel, &movementStatus, &keyboardRange, &midiHelp}) label->setFont(uiTypeface(14.0f));
+    movementTitle.setFont(uiTypeface(17.0f, juce::Font::bold));
+    sendLookAndFeelChange();
+    repaint();
+}
 void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
 {
     const auto teal = juce::Colour(cyan);
@@ -553,7 +578,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colour(pearl).withAlpha(0.4f));
     g.drawRoundedRectangle(waveformBounds.expanded(12,27).toFloat(),18.0f,1.2f);
     g.setColour(ivory);
-    g.setFont(juce::Font(juce::FontOptions(38.0f, juce::Font::bold)));
+    g.setFont(uiTypeface(38.0f, juce::Font::bold));
 #if defined(DRIZEL_HAS_DRIZEL_LOGO)
     {
         static const juce::Image drizelLogo = juce::ImageFileFormat::loadFrom(
@@ -567,7 +592,7 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
                juce::Justification::centredLeft);
 
     // Matching dark analog readouts for the loaded input and active grain count.
-    const auto drawReadout=[&g](juce::Rectangle<int> area,const juce::String& value)
+    const auto drawReadout=[this,&g](juce::Rectangle<int> area,const juce::String& value)
     {
         g.setGradientFill(juce::ColourGradient(juce::Colour(0xff25483a),
                                                area.getTopLeft().toFloat(),
@@ -577,16 +602,17 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(juce::Colour(0xff86a891));
         g.drawRoundedRectangle(area.toFloat().reduced(0.6f),6.0f,1.1f);
         g.setColour(juce::Colour(mint));
-        g.setFont(juce::Font(juce::FontOptions(14.0f)));
+        g.setFont(uiTypeface(14.0f));
         g.drawFittedText(value,area.reduced(10,2),juce::Justification::centredLeft,1);
     };
+    const bool live = !JucePlugin_IsSynth && audioInputChoice.getSelectedId() == 4;
     const auto sampleName=processor.loadedSampleState().path.fromLastOccurrenceOf("/",false,false);
     drawReadout({waveformBounds.getX(),waveformBounds.getY()-32,310,27},
-                "INPUT  /  " + (sampleName.isEmpty() ? juce::String("No WAV") : sampleName));
+                "INPUT  /  " + (live ? juce::String("DAW audio") : sampleName.isEmpty() ? juce::String(JucePlugin_IsSynth ? "Oscillator" : "No WAV") : sampleName));
     drawReadout({waveformBounds.getRight()-190,waveformBounds.getY()-32,190,27},
                 "ACTIVE GRAINS  " + juce::String(processor.activeGrainCount()));
     g.setColour(teal);
-    if(thumbnail.getTotalLength()>0.0)
+    if(!live && thumbnail.getTotalLength()>0.0)
     {
         thumbnail.drawChannels(g,waveformBounds,0.0,thumbnail.getTotalLength(),1.0f);
         const float pos=processor.parameters.getRawParameterValue("position")->load();
@@ -596,7 +622,22 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(amber);
         g.drawVerticalLine(x,static_cast<float>(waveformBounds.getY()),static_cast<float>(waveformBounds.getBottom()));
     }
-    else g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
+    else if (!live && !JucePlugin_IsSynth)
+        g.drawText("Drop a WAV here or choose Load WAV",waveformBounds,juce::Justification::centred);
+    if (live || JucePlugin_IsSynth)
+    {
+        for (int i = 0; i < 128; ++i)
+        {
+            const float x = waveformBounds.getX() + i * waveformBounds.getWidth() / 128.0f;
+            for (int out = 0; out < 2; ++out)
+            {
+                const float y = waveformBounds.getY() + waveformBounds.getHeight() * (out ? 0.75f : 0.25f);
+                const float h = juce::jlimit(0.0f, 1.0f, processor.waveformPeak(out != 0, i)) * waveformBounds.getHeight() * 0.22f;
+                g.setColour(out ? ivory : amber);
+                g.drawLine(x, y-h, x, y+h, 2.0f);
+            }
+        }
+    }
     const auto paintPanel = [&g](juce::Rectangle<int> bounds)
     {
         g.setColour(juce::Colour(0xfff6edd9));
@@ -610,21 +651,21 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
         paintPanel(panel);
 
     g.setColour(juce::Colour(forest));
-    g.setFont(juce::Font(juce::FontOptions(18.0f)));
+    g.setFont(uiTypeface(18.0f));
     g.drawText("SPEECH / TEXT", commandBounds.getX() + 16, commandBounds.getY() + 12,
                commandBounds.getWidth() - 32, 24, juce::Justification::centredLeft);
-    g.setFont(14.0f);
+    g.setFont(uiTypeface(14.0f));
     g.drawText("Grain modulation command", commandBounds.getX() + 16,
                movementCommand.getY() - 24, commandBounds.getWidth() - 32, 20,
                juce::Justification::centredLeft);
     g.setColour(juce::Colour(forest));
-    g.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
+    g.setFont(uiTypeface(14.0f, juce::Font::bold));
     const std::array<const char*,4> titles {{"GRAIN ENGINE","PITCH / VOICE","ENVELOPE","MODULATION"}};
     for(std::size_t i=0;i<panels.size();++i)
         g.drawText(titles[i],panels[i].getX()+14,panels[i].getY()+14,
                    panels[i].getWidth()-28,25,juce::Justification::centredLeft);
     g.setColour(juce::Colour(forest));
-    g.setFont(11.0f);
+    g.setFont(uiTypeface(11.0f));
     for(const auto& pair : std::array<std::pair<const char*,juce::Rectangle<int>>,3> {{
         {"MODE",modeChoice.getBounds()},{"SHAPE",shapeChoice.getBounds()},
         {"TARGET",destinationChoice.getBounds()}
@@ -638,6 +679,18 @@ void DrizelAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(displayedPeak >= 0.99f ? teal : juce::Colour(0xff557b64));
     g.fillRoundedRectangle(meterBounds.withWidth(juce::roundToInt(meterBounds.getWidth()*juce::jlimit(0.0f,1.0f,displayedPeak))).toFloat(),4.0f);
 }
+void DrizelAudioProcessorEditor::setKeyboardExpanded(bool expanded)
+{
+    keyboardExpanded = expanded;
+    processor.setKeyboardVisible(expanded);
+    keyboardToggle.setButtonText(expanded ? "Hide MIDI keyboard" : "Show MIDI keyboard");
+    for (juce::Component* component : std::array<juce::Component*, 5>{
+             &keyboard, &keyboardRange, &octaveDown, &octaveUp, &midiHelp})
+        component->setVisible(expanded);
+    setSize(compactEditorWidth, expanded ? expandedEditorHeight : collapsedEditorHeight);
+    repaint();
+}
+
 void DrizelAudioProcessorEditor::resized()
 {
     const int w = getWidth();
@@ -647,10 +700,12 @@ void DrizelAudioProcessorEditor::resized()
     saveButton.setBounds(w - 230, 24, 104, 32);
     playButton.setBounds(w - 113, 24, 82, 32);
     status.setBounds(35, 74, w - 390, 20);
-    captureButton.setBounds(w - 355, 72, 105, 27);
-    useCaptureButton.setBounds(w - 245, 72, 125, 27);
-    audioInputChoice.setBounds(w - 235, 105, 185, 27);
-    waveformBounds = {35, 132, w - 389, 119};
+#if JucePlugin_IsSynth
+    audioInputChoice.setVisible(false);
+    modeChoice.setEnabled(false);
+#endif
+    audioInputChoice.setBounds(w - 310, 264, 280, 28);
+    waveformBounds = {35, 132, w - 389, 112};
 
     selectionLabel.setBounds(35, 284, 140, 24);
     selectionChoice.setBounds(181, 281, 190, 30);
@@ -695,15 +750,15 @@ void DrizelAudioProcessorEditor::resized()
     movementBounds = {commandBounds.getRight() + 14, 525, w - commandWidth - 54, 300};
     const int commandX = commandBounds.getX() + 16;
     const int commandInnerWidth = commandBounds.getWidth() - 32;
-    movementCommand.setBounds(commandX, 599, commandInnerWidth, 62);
-    auto actions = juce::Rectangle<int>(commandX, 680, commandInnerWidth, 32);
+    movementCommand.setBounds(commandX, 599, commandInnerWidth, 105);
+    auto actions = juce::Rectangle<int>(commandX, 716, commandInnerWidth, 32);
 #if defined(DRIZEL_MAC_SPEECH) && DRIZEL_MAC_SPEECH
     if (speechButton.isVisible())
         speechButton.setBounds(actions.removeFromLeft(125).reduced(2, 0));
 #endif
     previewButton.setBounds(actions.removeFromLeft(110).reduced(2, 0));
     applyButton.setBounds(actions.removeFromLeft(125).reduced(2, 0));
-    movementStatus.setBounds(commandX, 727, commandInnerWidth, 28);
+    movementStatus.setBounds(commandX, 760, commandInnerWidth, 40);
 
     auto movementHeader = movementBounds.reduced(16, 10).removeFromTop(30);
     manualButton.setBounds(movementHeader.removeFromRight(120));
@@ -717,13 +772,14 @@ void DrizelAudioProcessorEditor::resized()
         movementLabels[i].setBounds(cx - cellWidth / 2, y + 98, cellWidth, 18);
     }
 
-    keyboardPanelBounds = {20, 839, w - 40, 143};
+    keyboardPanelBounds = {20, 839, w - 40, keyboardExpanded ? 143 : 28};
     keyboardHeaderBounds = keyboardPanelBounds.withHeight(32);
-    meterBounds = {w - 207, 856, 164, 8};
-    keyboardRange.setBounds(35, 847, 195, 22);
-    octaveDown.setBounds(230, 847, 28, 22);
-    octaveUp.setBounds(262, 847, 28, 22);
-    midiHelp.setBounds(300, 847, w - 635, 22);
+    keyboardToggle.setBounds(35, 842, 184, 22);
+    meterBounds = {w - 207, 850, 164, 8};
+    keyboardRange.setBounds(230, 847, 195, 22);
+    octaveDown.setBounds(430, 847, 28, 22);
+    octaveUp.setBounds(462, 847, 28, 22);
+    midiHelp.setBounds(500, 847, w - 735, 22);
     keyboard.setBounds(36, 877, w - 72, 89);
     keyboard.setKeyWidth((w - 72) / 14.0f);
 }
